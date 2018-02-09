@@ -226,7 +226,7 @@ if __name__ == "__main__":
     parser.add_argument('--nflies', type=int, default=1, help='number of flies in video')
     parser.add_argument('-d', '--display', type=int, default=None, help='show every Nth frame')
     parser.add_argument('-t', '--threshold', type=float, default=0.4, help='threshold for foreground detection, defaults to 0.3')
-    parser.add_argument('-s', '--start_frame', type=float, default=50, help='first frame to track, defaults to 50')
+    parser.add_argument('-s', '--start_frame', type=float, default=0, help='first frame to track, defaults to 50')
     parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
     parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
     parser.add_argument('--save_video', action='store_true', help='save annotated vid with tracks')

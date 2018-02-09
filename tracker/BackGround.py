@@ -52,24 +52,23 @@ class BackGround():
             pass
 
 
-def test():
-    vr = VideoReader("test/160125_1811_1.avi")
-    bg = BackGround(vr)
-    bg.estimate(500)
-    bg.save("test/background.png")
-    bg2 = BackGround(vr)
-    bg2.load("test/background.png")
-    print(bg2.background.shape)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', type=str, help='video file to process')
     parser.add_argument('-n', '--num_bg_frames', type=int, default=100, help='number of frames for estimating background (100)')
-    parser.add_argument('-f', '--format', type=str, default='tif', help='image format for background (png)')
+    parser.add_argument('-f', '--format', type=str, default='png', help='image format for background (png)')
+    parser.add_argument('-s', '--savebin', action='store_true', help='save as binary matrix (npy-format)')
+
     args = parser.parse_args()
 
     with video_file(args.filename) as vr:
         bg = BackGround(vr)
         bg.estimate(num_bg_frames=args.num_bg_frames)
-        bg.save('{base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format))
+
+        if args.format is not None:
+            print('saving background image as {0}.'.format('{base}.npy'.'{base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format)))
+            bg.save('{base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format))
+
+        if arg.savebin:
+            print('saving raw background to {0}.'.format('{base}.npy'.format(base=os.path.splitext(args.filename)[0])))
+            np.savez('{base}.npy'.format(base=os.path.splitext(args.filename)[0]), bg.background)

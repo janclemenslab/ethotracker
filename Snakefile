@@ -27,7 +27,7 @@ rule estimate_background:
     params:
         format="png",
         nframes=1000
-    shell: "python3 BackGround.py -n {params.nframes} -f {params.format} {input}"
+    shell: "python3 BackGround.py -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
     input:
