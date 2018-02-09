@@ -4,11 +4,6 @@ analysis.egg-info/SOURCES.txt
 analysis.egg-info/dependency_links.txt
 analysis.egg-info/not-zip-safe
 analysis.egg-info/top_level.txt
-jobs/__init__.py
-jobs/containerize.py
-jobs/estimate_bg.py
-jobs/postprocessing.py
-jobs/track.py
 tracker/BackGround.py
 tracker/FlyPursuit.py
 tracker/ForeGround.py

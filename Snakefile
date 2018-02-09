@@ -32,7 +32,7 @@ rule estimate_background:
 rule track:
     input:
         video="/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4",
-        background="/scratch/clemens10/playback/dat/{directory}/{videofile}.tif"
+        background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log"
     shell: "python  -m tracker.FlyPursuit {input.video} -t 0.25"
