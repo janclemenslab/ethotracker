@@ -43,4 +43,4 @@ rule postprocess:
         snd_logs = "/scratch/clemens10/playback/dat/{directory}/{directory}_snd.log",
     output: "/scratch/clemens10/playback/res/{directory}_spd.h5"
     log:    "/scratch/clemens10/playback/dat/{directory}/{directory}_post.log"
-    shell: "python3 postprocessing.py {input.tracks} {input.snd_logs} {output}"
+    shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {input.snd_logs} {output}"
