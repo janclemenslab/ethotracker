@@ -75,16 +75,16 @@ def stats_by_group(data, grouping, fun):
 
 if __name__ == '__main__':
     # these should be arguments
-    dir_name = '.'
-    rec_name = 'rpi8-20180129_170709'
+    # dir_name = '.'
+    # rec_name = 'rpi8-20180129_170709'
 
-    track_file_name = '{0}/{1}/{1}.h5'.format(dir_name, rec_name)
-    prot_file_name  = '{0}/{1}/{1}_snd.log'.format(dir_name, rec_name)
-    save_file_name  = '{0}/{1}/{1}_spd.h5'.format(dir_name, rec_name)
+    # track_file_name = '{0}/{1}/{1}.h5'.format(dir_name, rec_name)
+    # prot_file_name  = '{0}/{1}/{1}_snd.log'.format(dir_name, rec_name)
+    # save_file_name  = '{0}/{1}/{1}_spd.h5'.format(dir_name, rec_name)
     
-    # track_file_name = sys.argv[1]
-    # prot_file_name = sys.argv[2]
-    # save_file_name = sys.argv[3]
+    track_file_name = sys.argv[1]
+    prot_file_name = sys.argv[2]
+    save_file_name = sys.argv[3]
 
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
