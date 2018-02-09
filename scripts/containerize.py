@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 inp = sys.argv[1]
 out = sys.argv[2]
