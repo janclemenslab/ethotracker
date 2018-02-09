@@ -27,7 +27,7 @@ rule estimate_background:
     params:
         format="png",
         nframes=1000
-    shell: "python3 BackGround.py -n {params.nframes} -f {params.format} --savebin {input}"
+    shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
     input:
@@ -35,7 +35,7 @@ rule track:
         background="/scratch/clemens10/playback/dat/{directory}/{videofile}.tif"
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log"
-    shell: "python FlyPursuit.py {input.video} -t 0.25"
+    shell: "python  -m tracker.FlyPursuit {input.video} -t 0.25"
 
 rule postprocess:
     input: "/scratch/clemens10/playback/dat/{directory}/{directory}.h5"

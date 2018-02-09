@@ -16,6 +16,8 @@ class BackGround():
           update(frame) - background with frmae
           save(file_name) - save `background` to file_name.PNG
           load(file_name) - load `bckground` from file_name (uses cv2.imread)
+
+       TODO: calculate median - not mean - frame
     """
 
     def __init__(self, vr):
