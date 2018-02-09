@@ -38,7 +38,9 @@ rule track:
     shell: "python  -m tracker.FlyPursuit {input.video} -t 0.25"
 
 rule postprocess:
-    input: "/scratch/clemens10/playback/dat/{directory}/{directory}.h5"
+    input: 
+        tracks = "/scratch/clemens10/playback/dat/{directory}/{directory}.h5",
+        snd_logs = "/scratch/clemens10/playback/dat/{directory}/{directory}_snd.log",
     output: "/scratch/clemens10/playback/res/{directory}_spd.h5"
     log:    "/scratch/clemens10/playback/dat/{directory}/{directory}_post.log"
-    shell: "python3 postprocessing.py {input}"
+    shell: "python3 postprocessing.py {input.tracks} {input.snd_logs} {output}"
