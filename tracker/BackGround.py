@@ -68,9 +68,9 @@ if __name__ == "__main__":
         bg.estimate(num_bg_frames=args.num_bg_frames)
 
         if args.format is not None:
-            print('saving background image as {base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format)))
+            print('saving background image as {base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format))
             bg.save('{base}.{format}'.format(base=os.path.splitext(args.filename)[0], format=args.format))
 
-        if arg.savebin:
-            print('saving raw background to {base}.npy'.format(base=os.path.splitext(args.filename)[0])))
+        if args.savebin:
+            print('saving raw background to {base}.npy'.format(base=os.path.splitext(args.filename)[0]))
             np.savez('{base}.npy'.format(base=os.path.splitext(args.filename)[0]), bg.background)
