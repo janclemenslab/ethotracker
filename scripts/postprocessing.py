@@ -82,6 +82,7 @@ if __name__ == '__main__':
     track_file_name = sys.argv[1]
     prot_file_name = sys.argv[2]
     save_file_name = sys.argv[3]
+    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(track_file_name, prot_file_name, save_file_name))
 
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
@@ -91,32 +92,36 @@ if __name__ == '__main__':
     print(prot['stimFileName'])
 
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8)
-    spd = get_speed(pos, 7)
+    if led_onsets:
+        print('found {0} led onsets'.format(len(led_onsets)))
+        spd = get_speed(pos, 7)
 
-    chunklen = 4000
-    chunkpre = 2000
-    trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
+        chunklen = 4000
+        chunkpre = 2000
+        trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
 
-    # calc base line and test spd
-    spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
-    spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
+        # calc base line and test spd
+        spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
+        spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
 
-    # average trials by stimulus
-    X = trial_traces - spd_base  # subtract baseline from each trial
-    S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM
-    F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
-    stimnames, Sidx = np.unique(S, return_inverse=True)
-    print(stimnames)
-    SF = 100 * Sidx + F  # grouping by STIM and FLY
+        # average trials by stimulus
+        X = trial_traces - spd_base  # subtract baseline from each trial
+        S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM
+        F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
+        stimnames, Sidx = np.unique(S, return_inverse=True)
+        print(stimnames)
+        SF = 100 * Sidx + F  # grouping by STIM and FLY
 
-    stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
+        stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
 
-    with h5py.File(save_file_name, 'w') as f:
-        # f.create_dataset('stimnames', data=stimnames)
-        f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
-        f.create_dataset('stimfly_mean', data=stimfly_mean, compression='gzip')
-        f.create_dataset('spd_base', data=spd_base, compression='gzip')
-        f.create_dataset('spd_test', data=spd_test, compression='gzip')
-        f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
-        f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
-        # f.create_dataset('track_file_name', value=file_name, dtype=h5py.special_dtype(vlen=unicode))
+        with h5py.File(save_file_name, 'w') as f:
+            # f.create_dataset('stimnames', data=stimnames)
+            f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
+            f.create_dataset('stimfly_mean', data=stimfly_mean, compression='gzip')
+            f.create_dataset('spd_base', data=spd_base, compression='gzip')
+            f.create_dataset('spd_test', data=spd_test, compression='gzip')
+            f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
+            f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
+            # f.create_dataset('track_file_name', value=file_name, dtype=h5py.special_dtype(vlen=unicode))
+    else:
+        print('ERROR: no LED onsets found. will not save.')
