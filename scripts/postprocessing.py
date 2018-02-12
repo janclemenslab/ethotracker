@@ -92,7 +92,7 @@ if __name__ == '__main__':
     print(prot['stimFileName'])
 
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8)
-    if led_onsets:
+    if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos, 7)
 
