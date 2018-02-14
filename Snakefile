@@ -35,7 +35,7 @@ rule track:
         background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log"
-    shell: "python  -m tracker.FlyPursuit {input.video} -t 0.25"
+    shell: "python  -m tracker.FlyPursuit {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
 
 rule postprocess:
     input: 
