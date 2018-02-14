@@ -1,0 +1,22 @@
+# list all video files
+directories, files, = glob_wildcards('/Volumes/ukme04/#Common/playback/dat/{directory}/{file}.h264')
+
+# remove hidden
+directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
+files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
+
+# generate inputs and outputs from listing
+mp4files = expand("/Volumes/ukme04/#Common/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
+
+rule all:
+    input: mp4files
+
+rule containerize:
+    input:  '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.h264'
+    output: '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.mp4'
+    log:    '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}_containerize.log'
+    shell: 'ffmpeg -i {input} -vcodec copy {output} -r 40'
+
+rule upload:
+    input: '/Volumes/ukme04/#Common/playback/dat/{directory}'     
+    shell: 'rsync -avHz --update --progress --exclude=".*" --exclude=".*/" {input} clemens10@gwdu102.gwdg.de:/scratch/clemens10/playback/'
