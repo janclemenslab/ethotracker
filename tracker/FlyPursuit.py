@@ -1,5 +1,6 @@
 from __future__ import print_function
 import numpy as np
+import cv2
 
 import argparse
 # import pyprind
@@ -104,8 +105,8 @@ class Prc():
                 if ii > 0:  # 0 is background
                     foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
                     centers[ii - 1, :], _, points, _, area[0, ii - 1] = fg.segment_center_of_mass(foreground_cropped)
-                    if points.shape[0] > 0:   # in case we lose a fly
-                        lines[ii - 1, :, :], _ = tk.fit_line(points)
+                    if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
+                        lines[ii - 1, :, :], _ = tk.fit_line(points) # need to make this more robust - based on median center and some pixels around that...
 
             if res.nflies > 1 and old_centers is not None:  # match centers across frames - not needed for one fly per chamber
                 new_labels, centers = tk.match(old_centers, centers)
@@ -142,6 +143,12 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             res = init(vr, start_frame, threshold, nflies, file_name, )
             printf("done initializing")
             pass
+
+        if len(led_coords)!=4:
+            ret, frame = vr.read()
+            led_coords = fg.detect_led(frame)
+            vr.reset()
+        print(led_coords)
 
         if init_only:
             return
@@ -230,7 +237,9 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
     parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
     parser.add_argument('--save_video', action='store_true', help='save annotated vid with tracks')
+    parser.add_argument('--led_coords', nargs='+', type=int, default=[10, 550, 100, -1], help='should be a sequence of 4 values OTHERWISE will autodetect')
     args = parser.parse_args()
 
     print('Tracking {0} flies in {1}.'.format(args.nflies, args.file_name))
-    run(args.file_name, init_only=args.init_only, override=args.override, display=args.display, save_video=args.save_video, nflies=args.nflies, threshold=args.threshold, start_frame=args.start_frame)
+    run(args.file_name, init_only=args.init_only, override=args.override, display=args.display, save_video=args.save_video,
+        nflies=args.nflies, threshold=args.threshold, start_frame=args.start_frame, led_coords=args.led_coords)
