@@ -55,7 +55,7 @@ def chunk_data(data, cutpoints, chunklen):
     cnt = 0
     for cutpoint in cutpoints:
         this = data[cutpoint:cutpoint + chunklen, :]
-        data_chunks[:, cnt:cnt + 12] = this
+        data_chunks[:, cnt:cnt + this.shape[1]] = this
         cnt += this.shape[1]
     data_chunks = data_chunks[:, :cnt]  # keep only non-empty traces
     return data_chunks
