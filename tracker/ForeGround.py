@@ -89,7 +89,7 @@ def segment_center_of_mass(frame):
         labels = None
         std = None
     else:
-        centers = np.nanmean(points, axis=0)
+        centers = np.nanmedian(points, axis=0)
         std = np.std(points, axis=0)
         labels = np.ones(points.shape, dtype=np.uint)  # for compatibility with multi-object methods
     return centers, labels, points, std, size
@@ -124,8 +124,8 @@ def detect_led(frame, channel=-1):
 
     # darkest corner cotains led
     led_corner = corner_slices[np.argmin(corner_brightness)]
-    # extract start stop indices in correct order for `Foreground.crop`
-    led_coords = [led_corner[0].start, led_corner[1].start, led_corner[0].stop, led_corner[1].stop]
+    # extract start stop indices in correct order for `Foreground.crop` - weird order to accomodate fg.crop
+    led_coords = [led_corner[1].start, led_corner[0].start, led_corner[1].stop, led_corner[0].stop]
     return led_coords
 
 
