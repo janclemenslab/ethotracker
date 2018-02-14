@@ -102,6 +102,33 @@ def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 30,
     return centers, labels, points
 
 
+def detect_led(frame, channel=-1):
+    """detect LED as darkest spot in channel(-1) in frame corner"""
+    # vertical and horizontal size of corners
+    vsize = 80
+    hsize = 200
+    v = frame.shape[0]
+    h = frame.shape[1]
+
+    corner_brightness = list()
+    # define slices for all four corners of the frame
+    corner_slices = ((slice(0, vsize), slice(0, hsize)),
+                     (slice(0, vsize), slice(h-hsize, h)),
+                     (slice(v-vsize, v), slice(0, hsize)),
+                     (slice(v-vsize, v), slice(h-hsize, h)))
+
+    # calculate brightness for each corner
+    for corner_slice in corner_slices:
+        corner = frame[corner_slice[0], corner_slice[1], channel]
+        corner_brightness.append(np.mean(corner))
+
+    # darkest corner cotains led
+    led_corner = corner_slices[np.argmin(corner_brightness)]
+    # extract start stop indices in correct order for `Foreground.crop`
+    led_coords = [led_corner[0].start, led_corner[1].start, led_corner[0].stop, led_corner[1].stop]
+    return led_coords
+
+
 def get_chambers(background, chamber_threshold=0.6, min_size=40000, max_size=50000, kernel_size=11):
     """detect (bright) chambers in background"""
     if len(background.shape) > 2:
