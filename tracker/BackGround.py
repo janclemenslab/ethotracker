@@ -5,7 +5,7 @@ import argparse
 import os
 
 class BackGround():
-    """class for estimating background
+    """class for estimating background - used median
        ARGS
           vr - VideoReader instance
        VARS
@@ -15,9 +15,7 @@ class BackGround():
           estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
           update(frame) - background with frmae
           save(file_name) - save `background` to file_name.PNG
-          load(file_name) - load `bckground` from file_name (uses cv2.imread)
-
-       TODO: calculate median - not mean - frame
+          load(file_name) - load `background` from file_name (uses cv2.imread)
     """
 
     def __init__(self, vr):
@@ -25,6 +23,7 @@ class BackGround():
         self.vr = vr
         self.background = np.zeros((self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels))
         self.background_count = 0
+        self.frames = []
 
     def estimate(self, num_bg_frames=100):
         """estimate back ground from video
@@ -35,11 +34,11 @@ class BackGround():
             ret, frame = self.vr.read(fr)
             if ret and frame is not None:
                 self.update(frame)
-        self.background = self.background / self.background_count
+        self.background = np.median(self.frames, axis=0)
 
     def update(self, frame):
         """updates background (mean frame) with `frame`"""
-        cv2.accumulate(frame, self.background)
+        self.frames.append(frame)
         self.background_count = self.background_count + 1
 
     def save(self, file_name):
