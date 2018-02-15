@@ -9,7 +9,7 @@ files = [file for directory, file in zip(directories, files) if not file.startsw
 mp4files = expand("/Volumes/ukme04/#Common/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
 
 rule all:
-    input: mp4files
+    input: mp4files, "rsync.done"
 
 rule containerize:
     input:  '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.h264'
@@ -18,5 +18,6 @@ rule containerize:
     shell: 'ffmpeg -i {input} -vcodec copy {output} -r 40'
 
 rule upload:
-    input: '/Volumes/ukme04/#Common/playback/dat/{directory}'     
-    shell: 'rsync -avHz --update --progress --exclude=".*" --exclude=".*/" {input} clemens10@gwdu102.gwdg.de:/scratch/clemens10/playback/'
+    input: '/Volumes/ukme04/#Common/playback/dat'     
+    output: 'rsync.done'
+    shell: 'rsync -avHz --update --progress --exclude=".*" --exclude="*.h264" --exclude=".*/" {input} clemens10@gwdu102.gwdg.de:/scratch/clemens10/playback/; touch rsync.done'

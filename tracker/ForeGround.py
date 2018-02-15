@@ -98,7 +98,7 @@ def segment_center_of_mass(frame):
 def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 30, 0.1), init_method=cv2.KMEANS_PP_CENTERS):
     """cluster points to get fly positions"""
     points = getpoints(frame)
-    cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, term_crit, 20, init_method)
+    cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=20, flags=init_method)
     return centers, labels, points
 
 
@@ -160,12 +160,19 @@ def get_bounding_box(labeled_frame):
 
 def annotate(frame, centers=None, lines=None):
     """annotate frame"""
+    if centers is not None or lines is not None:
+        colors = np.zeros((1, centers.shape[0], 3), np.uint8)
+        colors[0,:] = 220
+        colors[0,:,0] = np.arange(0, 180, 180.0/centers.shape[0])
+        colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0].astype(np.float32)/255.0
+        colors = [list(map(float, thisColor)) for thisColor in colors]
+
     if centers is not None:
-        for center in centers:
-            cv2.circle(frame, (center[1], center[0]), radius=6, color=[0, 0, 255], thickness=2)
+        for idx, center in enumerate(centers):
+            cv2.circle(frame, (center[1], center[0]), radius=6, color=colors[idx], thickness=1)
     if lines is not None:
         for line in lines:
-            cv2.line(frame, tuple(line[0]), tuple(line[1]), color=[0, 0, 255], thickness=2)
+            cv2.line(frame, tuple(line[0]), tuple(line[1]), color=[0, 0, 255], thickness=1)
     return frame
 
 

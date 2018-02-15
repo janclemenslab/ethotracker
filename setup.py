@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(name='analysis',
       version='0.10',
       description='playback analyses',
-      url='http://github.com/janclemenslab',
+      url='http://github.com/janclemenslab/ethoanalysis',
       author='Jan Clemens',
       author_email='clemensjan@googlemail.com',
       license='MIT',
