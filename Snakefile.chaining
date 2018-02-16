@@ -1,7 +1,9 @@
 # list all video files
 directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
 
+
 def readNflies(wildcards):
+    """read number of flies for current video from file - contains single nummber - file can be generated with `annotate_flies.py`"""
     filename = "/scratch/clemens10/chaining/dat/{0}/{1}.nflies".format(wildcards.directory, wildcards.videofile)
     with open(filename, 'r') as f:
         nflies = f.read()
