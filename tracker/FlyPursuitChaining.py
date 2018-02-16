@@ -36,7 +36,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res.background = bg.background[:, :, 0]
     vr.reset()
     # detect chambers
-    res.chambers = np.ones_like(res.background)#fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
+    res.chambers = np.ones_like(res.background).astype(np.uint8)#fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
     # res.chambers[:10,:] = 0
     res.chambers[:100,:] = 0
     # printf('found {0} chambers'.format( np.unique(res.chambers).shape[0]-1 ))
@@ -113,7 +113,7 @@ class Prc():
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
                             lines[ii - 1, label, :, :], _ = tk.fit_line(points[labels[:,0]==label,:]) # need to make this more robust - based on median center and some pixels around that...
-            
+
             if res.nflies > 1 and old_centers is not None:  # match centers across frames - not needed for one fly per chamber
                 for ii in uni_chambers:
                     if ii>0:
@@ -192,7 +192,10 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         #                                 centers=np.clip(np.uint(res.centers[res.frame_count, 0, :, :]),0,10000),
                         #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         chamberID = 0 # fix to work with multiple chambers
-                        frame_with_tracks = fg.annotate(frame/255,
+                        # frame_with_tracks = fg.annotate(frame/255,
+                        #                                 centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
+                        #                                 lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground), cv2.COLOR_GRAY2RGB),
                                                         centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                                                         lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
 
