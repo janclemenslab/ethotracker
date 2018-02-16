@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import os
-import sys
-import re
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -11,7 +9,6 @@ parser.add_argument('-n', '--jobname', type=str, default='bsubjob', help='unique
 parser.add_argument('--datadir', type=str, default='/scratch/clemens10/playback/dat/', help='log dir')
 parser.add_argument('--logdir', type=str, default='/scratch/clemens10/playback/log/', help='log dir')
 parser.add_argument('--dryrun', action='store_true', help='just compose the bsub-command')
-
 args = parser.parse_args()
 
 # -E is a pre-exec command, that reschedules the job if the command fails
