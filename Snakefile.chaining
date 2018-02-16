@@ -1,7 +1,7 @@
 # list all video files
 directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
 
-def readNflies(filename):
+def readNflies(wildcards):
     with open(filename, 'r') as f:
         nflies = f.read()
         return nflies
@@ -20,27 +20,27 @@ rule all:
     input: bgdfiles, trkfiles#, spdfiles
 
 rule estimate_background:
-    input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi"
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.png"
-    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log"
+    input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
+    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
+    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log",
     params:
         format="png",
-        nframes=1000
+        nframes=1000,
     shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
     input:
         video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-        background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png"
-        nflies=readNflies("/scratch/clemens10/chaining/dat/{directory}/{videofile}.nflies")
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5"        
-    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log"
-    shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
+        background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
+        nflies=readNflies("/scratch/clemens10/chaining/dat/{directory}/{videofile}.nflies"),
+    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
+    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
+    shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --nflies {input.nflies} --led_coords 0" # force automatic detection of led corner
 
 #rule postprocess:
 #    input:
 #        tracks = "/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
 #        snd_logs = "/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
-#    output: "/scratch/clemens10/playback/res/{directory}_spd.h5"
-#    log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log"
+#    output: "/scratch/clemens10/playback/res/{directory}_spd.h5",
+#    log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
 #    shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {input.snd_logs} {output}"
