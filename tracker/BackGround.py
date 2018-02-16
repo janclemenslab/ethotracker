@@ -13,7 +13,7 @@ class BackGround():
           background_count - number of frames which have been averaged to get `background`
        METHODS
           estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
-          update(frame) - background with frmae
+          #update(frame) - background with frmae
           save(file_name) - save `background` to file_name.PNG
           load(file_name) - load `background` from file_name (uses cv2.imread)
     """
@@ -23,23 +23,26 @@ class BackGround():
         self.vr = vr
         self.background = np.zeros((self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels))
         self.background_count = 0
-        self.frames = []
+        # self.frames = []
 
     def estimate(self, num_bg_frames=100):
         """estimate back ground from video
               num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
         """
         frame_numbers = np.linspace(1, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
-        for fr in frame_numbers:
+        # self.frames = np.nan * np.zeros((num_bg_frames, self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels), dtype=np.uint8)
+        for idx, fr in enumerate(frame_numbers):
             ret, frame = self.vr.read(fr)
             if ret and frame is not None:
                 self.update(frame)
-        self.background = np.median(self.frames, axis=0)
+                # self.frames[idx, :, :] = frame
+        self.background = self.background / self.background_count#np.nanmedian(self.frames, axis=0)
 
     def update(self, frame):
         """updates background (mean frame) with `frame`"""
-        self.frames.append(frame)
-        self.background_count = self.background_count + 1
+        # self.frames.append(frame)
+        cv2.accumulate(frame, self.background)
+        self.background_count += 1
 
     def save(self, file_name):
         """save `background` as file_name.PNG for later reference"""
