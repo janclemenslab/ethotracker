@@ -1,6 +1,12 @@
 # list all video files
 directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
 
+def readNflies(filename):
+    with open(filename, 'r') as f:
+        nflies = f.read()
+        return nflies
+
+
 # remove hidden
 directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
@@ -27,6 +33,8 @@ rule track:
         video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
         background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png"
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5"
+    params:
+        nflies=readNflies("/scratch/clemens10/chaining/dat/{directory}/{videofile}.nflies")
     log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log"
     shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
 
