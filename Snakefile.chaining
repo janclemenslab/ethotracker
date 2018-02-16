@@ -32,9 +32,8 @@ rule track:
     input:
         video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
         background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png"
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5"
-    params:
         nflies=readNflies("/scratch/clemens10/chaining/dat/{directory}/{videofile}.nflies")
+    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5"        
     log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log"
     shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
 
