@@ -11,7 +11,7 @@ trkfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.h5", zip, 
 spdfiles = expand("/scratch/clemens10/playback/res/{directory}_spd.h5", zip, directory=directories, file=files)
 
 rule all:
-    input: mp4files, bgdfiles, trkfiles, spdfiles
+    input: bgdfiles, trkfiles, spdfiles
 
 rule estimate_background:
     input: "/scratch/clemens10/playback/dat/{directory}/{videofile}.avi"
