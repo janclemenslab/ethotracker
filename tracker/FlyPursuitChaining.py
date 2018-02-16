@@ -113,10 +113,11 @@ class Prc():
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
                             lines[ii - 1, label, :, :], _ = tk.fit_line(points[labels[:,0]==label,:]) # need to make this more robust - based on median center and some pixels around that...
+            
             if res.nflies > 1 and old_centers is not None:  # match centers across frames - not needed for one fly per chamber
                 for ii in uni_chambers:
                     if ii>0:
-                        new_labels, centers[ii-1,:,:] = tk.match(old_centers[ii-1,:,:], centers[ii-1,:,:])
+                        new_labels, centers[ii-1, :, :] = tk.match(old_centers[ii-1, :, :], centers[ii-1, :, :])
             old_centers = np.copy(centers)  # remember
 
             if old_lines is not None: # fix forward/backward flips
@@ -124,8 +125,8 @@ class Prc():
                     if ii>0:
                         if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
                             for label in np.unique(labels):
-                                tmp, is_flipped, D = tk.fix_flips(old_lines[ii-1,label,:,:], lines[ii-1,label,:,:])
-                                lines[ii-1, label, :, :] = tmp
+                                # TODO: preserve order of lines! use `new_labels`??
+                                lines[ii-1, label, :, :], is_flipped, D = tk.fix_flips(old_lines[ii-1, label, :, :], lines[ii-1, label, :, :])
             old_lines = np.copy(lines)  # remember
 
             res.centers[res.frame_count, :, :, :] = centers
