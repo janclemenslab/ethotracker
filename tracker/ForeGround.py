@@ -162,9 +162,9 @@ def annotate(frame, centers=None, lines=None):
     """annotate frame"""
     if centers is not None or lines is not None:
         colors = np.zeros((1, centers.shape[0], 3), np.uint8)
-        colors[0,:] = 220
-        colors[0,:,0] = np.arange(0, 180, 180.0/centers.shape[0])
-        colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0].astype(np.float32)/255.0
+        colors[0, :] = 220
+        colors[0, :, 0] = np.arange(0, 180, 180.0/centers.shape[0])
+        colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0].astype(np.float32) / 255.0
         colors = [list(map(float, thisColor)) for thisColor in colors]
 
     if centers is not None:
@@ -176,8 +176,14 @@ def annotate(frame, centers=None, lines=None):
     return frame
 
 
-def show(frame, window_name="frame", time_out=1):
+def show(frame, window_name="frame", time_out=1, autoscale=False):
     """display frame"""
+    if autoscale:
+        if len(frame.shape) == 3:
+            maxval = np.max(np.max(frame, axis=0), axis=1)  # not tested
+            frame = frame / maxval
+        else:
+            frame = frame / np.max(frame)
     cv2.imshow(window_name, np.float32(frame))
     cv2.waitKey(time_out)
 
