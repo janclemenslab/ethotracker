@@ -171,7 +171,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             ret, frame = vr.read()
             frame_size = tuple(np.uint(16 * np.floor(np.array(frame.shape[0:2], dtype=np.double) / 16)))
             vr.reset()
-            printf('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr.frame.shape[0:2], frame_size))
+            printf('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(frame.shape[0:2], frame_size))
             vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
                                  fps=vr.frame_rate, frameSize=frame_size)
         # iterate over frames
