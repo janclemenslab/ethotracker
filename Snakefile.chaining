@@ -17,7 +17,7 @@ files = [file for directory, file in zip(directories, files) if not file.startsw
 # generate inputs and outputs from listing
 bgdfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.png", zip, directory=directories, file=files)
 trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
-spdfiles = expand("/scratch/clemens10/playback/res/{directory}_spd.h5", zip, directory=directories, file=files)
+spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
 
 rule all:
     input: bgdfiles, trkfiles, spdfiles
