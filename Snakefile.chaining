@@ -41,10 +41,10 @@ rule track:
     log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
     shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --nflies {params.nflies} --led_coords 0" # force automatic detection of led corner
 
-#rule postprocess:
+# rule postprocess:
 #    input:
 #        tracks = "/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
 #        snd_logs = "/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
-#    output: "/scratch/clemens10/playback/res/{directory}_spd.h5",
+#    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
 #    log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
 #    shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {input.snd_logs} {output}"

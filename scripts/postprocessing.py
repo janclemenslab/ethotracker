@@ -115,42 +115,49 @@ if __name__ == '__main__':
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
 
-    # parse log file to get order of stimuli
-    prot = parse_prot(prot_file_name)
-    print(prot['stimFileName'])
-
+    # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
 
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos, 7)
-
+        # chunk data
         chunklen = 4000
         chunkpre = 2000
         trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
-
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
 
-        # average trials by stimulus
-        X = trial_traces - spd_base  # subtract baseline from each trial
-        S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM
-        F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
-        stimnames, Sidx = np.unique(S, return_inverse=True)
-        print(stimnames)
-        SF = 100 * Sidx + F  # grouping by STIM and FLY
+        # try to load log file and compute trial averages
+        try:
+            # parse log file to get order of stimuli
+            prot = parse_prot(prot_file_name)
+            print(prot['stimFileName'])
+            
+            # average trials by stimulus
+            X = trial_traces - spd_base  # subtract baseline from each trial
+            S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM
+            F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
+            stimnames, Sidx = np.unique(S, return_inverse=True)
+            print(stimnames)
+            SF = 100 * Sidx + F  # grouping by STIM and FLY
 
-        stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
+            stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
+        except Exception as e:
+            print(e)
+            stimfly_labels = None
+            stimfly_mean = None
 
         with h5py.File(save_file_name, 'w') as f:
-            # f.create_dataset('stimnames', data=stimnames)
-            f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
-            f.create_dataset('stimfly_mean', data=stimfly_mean, compression='gzip')
             f.create_dataset('spd_base', data=spd_base, compression='gzip')
             f.create_dataset('spd_test', data=spd_test, compression='gzip')
             f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
             f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
+            f.create_dataset('led_offsets', data=led_offsets, compression='gzip')
+            f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
+            f.create_dataset('stimfly_mean', data=stimfly_mean, compression='gzip')
             # f.create_dataset('track_file_name', value=file_name, dtype=h5py.special_dtype(vlen=unicode))
+            # f.create_dataset('stimnames', data=stimnames)
     else:
         print('ERROR: no LED onsets found. will not save.')
