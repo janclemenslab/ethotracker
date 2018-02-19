@@ -20,7 +20,7 @@ trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, 
 spdfiles = expand("/scratch/clemens10/playback/res/{directory}_spd.h5", zip, directory=directories, file=files)
 
 rule all:
-    input: bgdfiles, trkfiles#, spdfiles
+    input: bgdfiles, trkfiles, spdfiles
 
 rule estimate_background:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
@@ -39,12 +39,12 @@ rule track:
         nflies=readNflies,
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
     log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
-    shell: "python -m tracker.FlyPursuitChaining {input.video} -t 0.3 --nflies {params.nflies} --led_coords 0" # force automatic detection of led corner
+    shell: "python3 -m tracker.FlyPursuitChaining {input.video} -t 0.3 --nflies {params.nflies} --led_coords 0" # force automatic detection of led corner
 
-# rule postprocess:
-#    input:
-#        tracks = "/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
-#        snd_logs = "/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
-#    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
-#    log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
-#    shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {input.snd_logs} {output}"
+rule postprocess:
+   input:
+       tracks = "/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+       snd_logs = "/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
+   output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
+   log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
+   shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {input.snd_logs} {output}"
