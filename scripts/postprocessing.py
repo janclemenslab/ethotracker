@@ -3,6 +3,8 @@ import numpy as np
 import h5py
 import scipy.signal
 import sys
+import peakutils
+from scipy import signal
 
 
 def load_data(file_name):
@@ -33,15 +35,41 @@ def parse_prot(filename):
     return prot
 
 
-def get_led_peaks(led, thres=0.8):
-    import peakutils
-    from scipy import signal
-
+def get_led_peaks(led, thres=0.8, min_interval=0):
     led_diff = np.diff(signal.savgol_filter(led, 11, 6)).T
-    led_onsets = peakutils.indexes(led_diff, thres=0.8)
-    led_offsets = peakutils.indexes(-led_diff, thres=0.8)
+    led_onsets = peakutils.indexes(led_diff, thres=thres)
+    led_offsets = peakutils.indexes(-led_diff, thres=thres)
+
+    # filter out repeats
+    # prepend large value to intervals so we keep the first on- and offsets
+    led_onset_interval = np.insert(np.diff(led_onsets), 0, 10e10)
+    led_onsets = led_onsets[led_onset_interval > min_interval]
+
+    led_offset_interval = np.insert(np.diff(led_offsets), 0, 10e10)
+    led_offsets = led_offsets[led_offset_interval > min_interval]
     return led_onsets, led_offsets
 
+def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
+    import matplotlib.pyplot as plt
+    fig = plt.gcf()
+    fig.set_size_inches(20, 10)
+
+    ax = plt.subplot(311)
+    ax.plot(led, linewidth=0.75)
+    ax.set_title('LED trace')
+
+    ax = plt.subplot(312)
+    ax.plot(np.diff(led).T, linewidth=0.75)
+    ax.plot(led_onsets,   4*np.ones_like(led_onsets), 'xr')
+    ax.plot(led_offsets, -4*np.ones_like(led_offsets), 'xg')
+
+    ax = plt.subplot(313)
+    ax.plot(np.diff(led_onsets), 'o-')
+    ax.plot(np.diff(led_offsets), 'x-')
+
+    plt.axis('tight')
+    if savefilename:
+        plt.savefig(savefilename)
 
 def get_speed(pos, medfiltlen=None):
     spd = np.sqrt(np.sum(np.diff(pos, axis=0).astype(np.float32)**2, axis=2))
@@ -91,7 +119,8 @@ if __name__ == '__main__':
     prot = parse_prot(prot_file_name)
     print(prot['stimFileName'])
 
-    led_onsets, led_offsets = get_led_peaks(led, thres=0.8)
+    led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
+
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos, 7)
