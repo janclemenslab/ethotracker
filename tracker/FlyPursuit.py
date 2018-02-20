@@ -111,7 +111,7 @@ class Prc():
             old_centers = centers  # remember
 
             if old_lines is not None:  # fix forward/backward flips
-                lines, is_flipped, D = tk.fix_flips(old_lines, lines)
+                lines, is_flipped, D = tk.fix_flips(old_lines[0, :], lines)
             old_lines = lines  # remember
 
             res.centers[res.frame_count, :, :] = centers
