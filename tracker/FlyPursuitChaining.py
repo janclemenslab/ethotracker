@@ -62,6 +62,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.number_of_frames = int(vr.number_of_frames)
+
     res.centers = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
     res.lines = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
@@ -125,7 +126,7 @@ class Prc():
                 for ii in uni_chambers:
                     if ii>0:
                         if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
-                            for label in np.unique(labels):                                
+                            for label in np.unique(labels):
                                 lines[ii-1, label, :, :], is_flipped, D = tk.fix_flips(old_lines[ii-1, label, 0, :], lines[ii-1, label, :, :])
             old_lines = np.copy(lines)  # remember
 
