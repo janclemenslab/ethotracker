@@ -25,7 +25,7 @@ def fit_line(points, line_len=10):
 
 
 def fix_flips(old_lines, new_lines):
-    D = np.sum(np.abs(old_lines - new_lines), 1)  # distance between old head and new head/tail
+    D = np.sum(np.abs(old_lines - new_lines), axis=1)  # distance between old head and new head/tail
     is_flipped = np.argmin(D) != 0
     if is_flipped:  # if new head is not closer to old head than new tail
         new_lines = new_lines[[1, 0], :]  # -> swap head/tail

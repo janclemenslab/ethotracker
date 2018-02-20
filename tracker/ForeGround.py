@@ -171,8 +171,8 @@ def annotate(frame, centers=None, lines=None):
         for idx, center in enumerate(centers):
             cv2.circle(frame, (center[1], center[0]), radius=6, color=colors[idx], thickness=1)
     if lines is not None:
-        for line in lines:
-            cv2.line(frame, tuple(line[0]), tuple(line[1]), color=[0, 0, 255], thickness=1)
+        for idx, line in enumerate(lines):
+            cv2.line(frame, tuple(line[0]), tuple(line[1]), color=colors[idx], thickness=1)
     return frame
 
 

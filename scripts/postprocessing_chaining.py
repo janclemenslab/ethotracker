@@ -7,6 +7,7 @@ import peakutils
 from scipy import signal
 import os
 
+
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         pos = f['centers'][:]
@@ -67,8 +68,10 @@ def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
     ax.plot(np.diff(led_onsets), 'o-')
     ax.plot(np.diff(led_offsets), 'x-')
 
+    # plt.show()
     # plt.axis('tight')
     if savefilename:
+        print(savefilename)
         plt.savefig(savefilename)
 
 def get_speed(pos, medfiltlen=None):
@@ -114,17 +117,19 @@ if __name__ == '__main__':
 
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
-
     # detect LED onsets
-    led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
-    plot_led_peaks(led, led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
+    led_onsets, led_offsets = get_led_peaks(led[0], thres=0.8, min_interval=1000)
+    print(led_onsets)
+    # plot LEDs and save fig 
+    plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
-        spd = get_speed(pos, 7)
+        spd = get_speed(pos[:, 0, :, :], 7)
         # chunk data
-        chunklen = 4000
-        chunkpre = 2000
-        trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
+        chunklen = 13000
+        chunkpre = 3000
+        good_idx = (led_onsets - chunkpre + chunklen) <= spd.shape[0]  # ensure we don't exceed bounds - ignore too late LEDs
+        trial_traces = chunk_data(spd, led_onsets[good_idx] - chunkpre, chunklen)
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
@@ -145,11 +150,13 @@ if __name__ == '__main__':
 
             stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
         except Exception as e:
+            print('error while reading snd_log and stim averaging:')
             print(e)
-            stimfly_labels = None
-            stimfly_mean = None
+            # fall back values
+            stimfly_labels = np.zeros((0, 0))
+            stimfly_mean = np.zeros((0, 0))
             stimnames = ['unknown']
-            
+
         print(f'saving to {save_file_name}')
         with h5py.File(save_file_name, 'w') as f:
             f.create_dataset('spd_base', data=spd_base, compression='gzip')
