@@ -1,3 +1,9 @@
+#!/bin/sh
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export OPENBLAS_MAIN_FREE=1
+
 SCRIPTDIR="/usr/users/clemens10/analysis/scripts"
 DATADIR="/scratch/clemens10/playback/"
 LOGDIR="/scratch/clemens10/playback/log"
