@@ -12,7 +12,7 @@ plt.ion()
 
 # load video
 root = '/Volumes/ukme04/#Common/chaining/dat'
-recname = 'localhost-20180213_132850'  # 'localhost-20180213_145725'
+recname = 'localhost-20180207_112546'  # 'localhost-20180213_145725'
 filename = os.path.join(root, recname + '/' + recname + '.avi')
 print(filename)
 vr = VideoReader(filename)
@@ -22,8 +22,8 @@ filename = os.path.join(root, recname + '/' + recname + '.h5')
 r = h5py.File(filename)
 
 # vr.frame_rate = 40
-frame_number = 0
-frame_offset = 250
+frame_number = 250
+frame_offset = 0
 plt.gcf().set_size_inches(20, 20)
 vr.read(frame_offset)
 
@@ -46,10 +46,10 @@ while True:
     # new_tails_fixed = lines[:, 0, :]
     # old_lines = lines.copy()
     # r['lines'][frame_number, chamber_number, :, :, :] = lines
-
+    lines = np.clip(np.uint(r['lines'][frame_number, chamber_number, :, :, :]), 0, 10000)
     frame_with_tracks = fg.annotate(frame[80:, :, :] / 255,
-                                    centers=np.clip(np.uint(lines[:, 0, ::-1]), 0, 10000),
-                                    lines=np.clip(np.uint(r['lines'][frame_number, chamber_number, :, :, :]), 0, 10000))
+                                    centers=lines[:,0,::-1],
+                                    lines=lines)
     plt.cla()
     plt.imshow(frame_with_tracks)
     plt.pause(0.000001)

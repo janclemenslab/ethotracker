@@ -5,7 +5,7 @@ import glob
 from tracker.VideoReader import VideoReader
 # list all mp4 files
 
-root = 'Z:\#Common\chaining'#'/Volumes/ukme04/#Common/chaining'#'/scratch/clemens10/playback'
+root = '/Volumes/ukme04/#Common/chaining'#'Z:\#Common\chaining'#'/Volumes/ukme04/#Common/chaining'#'/scratch/clemens10/playback'
 datadir = f'{root}/dat'
 
 print(f'{datadir}/**/*.avi')

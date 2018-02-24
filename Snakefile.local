@@ -18,6 +18,6 @@ rule containerize:
     shell: 'ffmpeg -i {input} -vcodec copy {output} -r 40'
 
 rule upload:
-    input: '/Volumes/ukme04/#Common/playback/dat'     
+    input: '/Volumes/ukme04/#Common/playback/dat'
     output: 'rsync.done'
     shell: 'rsync -avHz --update --progress --exclude=".*" --exclude="*.h264" --exclude=".*/" {input} clemens10@gwdu102.gwdg.de:/scratch/clemens10/playback/; touch rsync.done'

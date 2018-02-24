@@ -38,7 +38,9 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     # detect chambers
     res.chambers = np.ones_like(res.background).astype(np.uint8)#fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
     # res.chambers[:10,:] = 0
-    res.chambers[:80,:] = 0
+
+
+    res.chambers[:40,:] = 0
     # printf('found {0} chambers'.format( np.unique(res.chambers).shape[0]-1 ))
 
     # detect empty chambers
@@ -102,7 +104,7 @@ class Prc():
         # process
         while True:
             frame, res = yield
-            res.frame_count = int(res.frame_count + 1)
+            res.frame_count = int(res.frame_count+1)
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
 
@@ -110,19 +112,19 @@ class Prc():
                 if ii > 0:  # 0 is background
                     foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
                     # centers[ii - 1, :], labels, points, _, area[0, ii - 1] = fg.segment_center_of_mass(foreground_cropped)
-                    centers[ii - 1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters= res.nflies)
+                    centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters= res.nflies)
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
-                            lines[ii - 1, label, :, :], _ = tk.fit_line(points[labels[:,0]==label,:]) # need to make this more robust - based on median center and some pixels around that...
+                            lines[ii-1, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
 
             if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
                 for ii in uni_chambers:
                     if ii>0:
                         new_labels, centers[ii-1, :, :] = tk.match(old_centers[ii-1, :, :], centers[ii-1, :, :])
-                        lines[ii - 1, :, :, :] = lines[ii-1, new_labels, :, :] # also re-order lines
+                        lines[ii-1, :, :, :] = lines[ii-1, new_labels, :, :] # also re-order lines
             old_centers = np.copy(centers)  # remember
 
-            if old_lines is not None: # fix forward/backward flips
+            if old_lines is not None:  # fix forward/backward flips
                 for ii in uni_chambers:
                     if ii>0:
                         if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
@@ -196,7 +198,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         chamberID = 0 # fix to work with multiple chambers
 
-                        frame_with_tracks = fg.annotate(frame[80:,:,:]/255,
+                        frame_with_tracks = fg.annotate(frame[40:,:,:]/255,
                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
                         # frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground), cv2.COLOR_GRAY2RGB),
