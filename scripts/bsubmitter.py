@@ -25,7 +25,8 @@ for videofile in videofiles[-15:]:
 
         # cmd_track = f"python -m tracker.FlyPursuitChaining {videofile} --nflies {nflies} -o -t 0.25 --led_coords 0"
         #cmd_post = f"python3 ~/Dropbox/code.py/analysis/scripts/postprocessing.py {basepath}.h5 {basepath}_snd.log {os.path.join(resdir,basename)}_spd.h5"
-        cmd_post = f"python ~/Dropbox/code.py/analysis/scripts/postprocessing.py {basepath}.h5 {basepath}_snd.log {os.path.join(resdir,basename)}_spd.h5"
+        # cmd_post = f"python ~/Dropbox/code.py/analysis/scripts/postprocessing.py {basepath}.h5 {basepath}_snd.log {os.path.join(resdir,basename)}_spd.h5"
+        cmd_post = f"python ~/analysis/scripts/postprocessing.py {basepath}.h5 {basepath}_snd.log {os.path.join(resdir,basename)}_spd.h5"
         # print(cmd_track)
         # os.system(cmd_track)
 

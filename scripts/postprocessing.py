@@ -155,6 +155,7 @@ if __name__ == '__main__':
             f.create_dataset('spd_base', data=spd_base, compression='gzip')
             f.create_dataset('spd_test', data=spd_test, compression='gzip')
             f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
+            f.create_dataset('fly_ids', data=SF, compression='gzip')
             f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
             f.create_dataset('led_offsets', data=led_offsets, compression='gzip')
             f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
