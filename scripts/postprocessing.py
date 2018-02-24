@@ -136,7 +136,7 @@ if __name__ == '__main__':
         try:
             # parse log file to get order of stimuli
             prot = parse_prot(prot_file_name)
-            print(prot['stimFileName'])
+            # print(prot['stimFileName'])
 
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
