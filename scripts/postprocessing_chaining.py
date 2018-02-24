@@ -120,8 +120,12 @@ if __name__ == '__main__':
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led[0], thres=0.8, min_interval=1000)
     print(led_onsets)
-    # plot LEDs and save fig 
-    plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
+    # plot LEDs and save fig
+    try:
+        plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
+    except:
+        pass
+
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos[:, 0, :, :], 7)
@@ -139,7 +143,7 @@ if __name__ == '__main__':
             # parse log file to get order of stimuli
             prot = parse_prot(prot_file_name)
             print(prot['stimFileName'])
-            
+
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
             S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM

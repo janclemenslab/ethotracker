@@ -55,6 +55,7 @@ for playlist in playlists:
     group_labels = np.zeros((0,))
     traces = np.zeros((4000, 0))
     trial_traces = np.zeros((4000, 0))
+    trial_ids = np.zeros((0,))
     rec_id = np.zeros((0,))
     stim_names = np.zeros((0,), dtype=object)
     recording_name = []
@@ -67,6 +68,7 @@ for playlist in playlists:
                 # aggregate all fields across results_files
                 group_labels = np.concatenate((group_labels, f['stimfly_labels'][:]))
                 trial_traces = np.concatenate((trial_traces, f['trial_traces'][:]), axis=1)
+                trial_ids = np.concatenate((trial_ids, f['fly_ids'][:]))
                 traces = np.concatenate((traces, f['stimfly_mean'][:]), axis=1)
                 rec_id = np.concatenate((rec_id, idx * np.ones(f['stimfly_labels'][:].shape)))
                 stim_names = np.concatenate((stim_names, f['stim_names'][:]))
