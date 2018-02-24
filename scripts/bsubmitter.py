@@ -15,7 +15,7 @@ videofiles.sort()
 print(videofiles)
 
 # build and execute command
-for videofile in videofiles[-15:]:
+for videofile in videofiles:
     try:
         basename = os.path.splitext(os.path.basename(videofile))[0]
         basepath = os.path.splitext(videofile)[0]
