@@ -9,7 +9,7 @@ def readNflies(wildcards):
     try:
         with open(filename, 'r') as f:
             nflies = f.read()
-    except Exception as a:
+    except Exception as e:
         print(e)
     return nflies
 
@@ -43,7 +43,7 @@ rule track:
         runtime="20:00",
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
     log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
-    shell: "python3 -m tracker.FlyPursuitChaining {input.video} -t 0.25 --nflies {params.nflies} --led_coords 0" # force automatic detection of led corner
+    shell: "python3 -m tracker.FlyPursuitChaining {input.video} -t 0.25 --nflies {params.nflies} --led_coords 0 -o" # force automatic detection of led corner
 
 rule postprocess:
    input:
