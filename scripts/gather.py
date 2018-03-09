@@ -67,8 +67,11 @@ for playlist in playlists:
             with h5py.File(results_file, 'r') as f:
                 # aggregate all fields across results_files
                 group_labels = np.concatenate((group_labels, f['stimfly_labels'][:]))
-                trial_traces = np.concatenate((trial_traces, f['trial_traces'][:]), axis=1)
-                trial_ids = np.concatenate((trial_ids, f['fly_ids'][:]))
+                try:
+                    trial_ids = np.concatenate((trial_ids, f['fly_ids'][:]))
+                    trial_traces = np.concatenate((trial_traces, f['trial_traces'][:]), axis=1)
+                except:
+                    pass
                 traces = np.concatenate((traces, f['stimfly_mean'][:]), axis=1)
                 rec_id = np.concatenate((rec_id, idx * np.ones(f['stimfly_labels'][:].shape)))
                 stim_names = np.concatenate((stim_names, f['stim_names'][:]))

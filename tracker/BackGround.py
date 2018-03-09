@@ -25,11 +25,11 @@ class BackGround():
         self.background_count = 0
         # self.frames = []
 
-    def estimate(self, num_bg_frames=100):
+    def estimate(self, num_bg_frames=100, start_frame=1):
         """estimate back ground from video
               num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
         """
-        frame_numbers = np.linspace(1, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
+        frame_numbers = np.linspace(start_frame, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
         # self.frames = np.nan * np.zeros((num_bg_frames, self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels), dtype=np.uint8)
         for idx, fr in enumerate(frame_numbers):
             ret, frame = self.vr.read(fr)

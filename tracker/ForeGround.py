@@ -98,7 +98,7 @@ def segment_center_of_mass(frame):
 def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 30, 0.1), init_method=cv2.KMEANS_PP_CENTERS):
     """cluster points to get fly positions"""
     points = getpoints(frame)
-    cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=20, flags=init_method)
+    cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=100, flags=init_method)
     return centers, labels, points
 
 

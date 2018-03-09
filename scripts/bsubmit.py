@@ -22,9 +22,14 @@ jobname = "{rule}-{jobid}".format(rule=props["rule"], jobid=sm_jobid)
 if props["params"].get("logid"):
     jobname = "{rule}-{id}".format(rule=props["rule"], id=props["params"]["logid"])
 
+if props["params"].get("runtime"):
+    runtime = props["params"].get("runtime")
+else:
+    runtime = "08:00"
+
 # -E is a pre-exec command, that reschedules the job if the command fails
 #   in this case, if the data dir is unavailable (as may be the case for a hot-mounted file path)
-cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=jobname, datadir=DATADIR, runtime="10:00")
+cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=jobname, datadir=DATADIR, runtime=runtime)
 # cmdline = 'bsub -J {jobname} -W {runtime}'.format(jobname=jobname, runtime="08:00")
 
 # log file output

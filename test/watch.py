@@ -11,19 +11,21 @@ import h5py
 plt.ion()
 
 # load video
-root = '/Volumes/ukme04/#Common/chaining/dat'
-recname = 'localhost-20180207_112546'  # 'localhost-20180213_145725'
-filename = os.path.join(root, recname + '/' + recname + '.avi')
+root = '/Users/janc/'#'/Volumes/ukme04/#Common/chaining/dat'
+recname = 'localhost-20180212_104353'#localhost-20180207_112546'  # 'localhost-20180213_145725'
+# filename = os.path.join(root, recname + '/' + recname + '.avi')
+filename = os.path.join(root, recname + '.avi')
 print(filename)
 vr = VideoReader(filename)
 
 # load tracker results
-filename = os.path.join(root, recname + '/' + recname + '.h5')
+# filename = os.path.join(root, recname + '/' + recname + '.h5')
+filename = os.path.join(root, recname + '.h5')
 r = h5py.File(filename)
 
 # vr.frame_rate = 40
-frame_number = 250
-frame_offset = 0
+frame_number = 0+10000#250
+frame_offset = 0+10000
 plt.gcf().set_size_inches(20, 20)
 vr.read(frame_offset)
 
@@ -52,4 +54,5 @@ while True:
                                     lines=lines)
     plt.cla()
     plt.imshow(frame_with_tracks)
+    plt.title(frame_number)
     plt.pause(0.000001)

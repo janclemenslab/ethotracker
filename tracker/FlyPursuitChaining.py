@@ -32,7 +32,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     #     # printf('estimating background')
 
     bg = BackGround(vr)
-    bg.estimate(num_bg_frames)
+    bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
     vr.reset()
     # detect chambers
