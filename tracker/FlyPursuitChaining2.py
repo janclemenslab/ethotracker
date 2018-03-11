@@ -162,7 +162,7 @@ class Prc():
             yield res, foreground
 
 
-def run(file_name, override=False, init_only=False, display=None, save_video=False, nflies=1, threshold=0.4, save_interval=1000, start_frame=0, led_coords=[10, 550, 100, -1]):
+def run(file_name, override=False, init_only=False, display=None, save_video=False, nflies=1, threshold=0.4, save_interval=1000, start_frame=None, led_coords=[10, 550, 100, -1]):
     try:
         printf = lambda string: print(os.path.basename(file_name) + ": " + string)
         printf('processing ' + file_name)
@@ -172,13 +172,17 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             try:  # attempt resume from intermediate results
                 res = Results(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
                 res_loaded = True
-                printf('resuming from {0}'.format(res.frame_count))
+                if start_frame is None:
+                    start_frame = res.frame_count
+                printf('resuming from {0}'.format(start_frame))
 
             except Exception as e:  # if fails start from scratch
                 res_loaded = False
                 pass
 
         if override or not res_loaded:  # re-initialize tracker
+            if start_frame is None:
+                start_frame = 0
             printf("start initializing")
             res = init(vr, start_frame, threshold, nflies, file_name, )
             printf("done initializing")
@@ -192,7 +196,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         if init_only:
             return
         res.threshold = threshold
-        vr.seek(start_frame)# vr.seek(res.frame_count)
+        vr.seek(start_frame)
         if save_video:
             ret, frame = vr.read()
             frame_size = tuple(np.uint(16 * np.floor(np.array(frame.shape[0:2], dtype=np.double) / 16)))
