@@ -129,13 +129,10 @@ class Prc():
                             new_labels[labels==label] = cnt
                         labels = new_labels.copy()
                         # calculate center values from new labels
-                        # if res.frame_count>=31028-1:
-                        #     import ipdb;ipdb.set_trace()
-                        #     plt.ion();plt.imshow(labeled_frame);plt.plot(centers[ii-1,:,1], centers[ii-1,:,0], '.r') 
-                        # if np.unique(labels).shape[0]>11:
-                        #     import ipdb;ipdb.set_trace()
                         for label in np.unique(labels):
                             centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
+
+                        # fall back to fg.segment_cluster on error??
                         
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
@@ -174,6 +171,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                 res_loaded = True
                 if start_frame is None:
                     start_frame = res.frame_count
+                else:
+                    res.frame_count = start_frame
                 printf('resuming from {0}'.format(start_frame))
 
             except Exception as e:  # if fails start from scratch
