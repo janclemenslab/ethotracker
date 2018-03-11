@@ -62,14 +62,36 @@ def getpoints(frame):
     return np.vstack(points).astype(np.float32).T
 
 
-def segment_connected_components(frame):
+def samplepoints(frame, nval=5000):
+    frame = frame/np.sum(frame)  # normalize to make PDF
+    maxval = frame.shape[0] * frame.shape[1]
+    linear_indices = np.random.choice(maxval, size=(nval, 1), replace=True, p=np.reshape(frame, (maxval,)))
+    points = np.unravel_index(linear_indices, frame.shape[:2])
+    return np.column_stack(points).astype(np.float32)
+
+
+def segment_connected_components(frame, minimal_size=None):
     """get properties of all connected components"""
     labeled_frame, nlbl = sci.label(frame)
+
+    if minimal_size is not None:
+        size = sci.labeled_comprehension(frame, labeled_frame, range(1, nlbl + 1), np.alen,
+                                 out_dtype=np.uint, default=0, pass_positions=False)
+        for lbl in np.where(size < minimal_size):
+            labeled_frame[labeled_frame==lbl+1] = 0  # remove
+        tmp = labeled_frame.copy()
+        for cnt, lbl in enumerate(np.unique(labeled_frame)):
+            tmp[labeled_frame==lbl] = cnt
+        labeled_frame = tmp
+        nlbl = np.unique(labeled_frame).shape[0]-1
+        frame[labeled_frame==0] = 0  # also remove from frame so it does not contribute to `points`
+
     points = getpoints(frame)
     # get labels for points
     columns = np.array(points[:, 1], dtype=np.intp)
     rows = np.array(points[:, 0], dtype=np.intp)
     labels = labeled_frame[rows, columns]
+
     # get centers etc
     centers = np.array(sci.center_of_mass(frame, labeled_frame, range(1, nlbl + 1)),
                        dtype=np.uint)  # convert to list from tuple
@@ -95,9 +117,10 @@ def segment_center_of_mass(frame):
     return centers, labels, points, std, size
 
 
-def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 30, 0.1), init_method=cv2.KMEANS_PP_CENTERS):
+def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100, 0.01), init_method=cv2.KMEANS_PP_CENTERS):
     """cluster points to get fly positions"""
     points = getpoints(frame)
+    # points = samplepoints(frame)
     cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=100, flags=init_method)
     return centers, labels, points
 
