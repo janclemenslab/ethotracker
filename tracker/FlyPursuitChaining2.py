@@ -19,7 +19,6 @@ plt.ion()
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res = Results()                     # init results object
-    import ipdb; ipdb.set_trace()
     bg = BackGround(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
