@@ -108,20 +108,20 @@ class Prc():
                     else:  # for subsequent frames use connected components and split those with multiple flies
                         this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
-                        print(this_size)
+                        # print(this_size)
                         this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
                         labels = this_labels.copy()  # copy for new labels
                         # maybe filter based on size of conn comps - get rid of very small ones
 
                         # get conn comp each fly is in using previous position
                         fly_conncomps = labeled_frame[np.uintp(old_centers[ii-1,:,0]), np.uintp(old_centers[ii-1,:,1])]
-                        print(fly_conncomps)
+                        # print(fly_conncomps)
                         # count number of flies per conn comp
                         flycnt, bins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
                         # bins -> conn comp ids
                         bins = np.uintp(bins[1:]-0.5)
-                        print(bins)
-                        print(flycnt)
+                        # print(bins)
+                        # print(flycnt)
                         # split conn compts with multiple flies using clustering
                         for con in np.uintp(bins[flycnt>1]):
                             # cluster points for current conn comp
