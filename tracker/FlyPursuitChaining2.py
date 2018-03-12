@@ -99,50 +99,61 @@ class Prc():
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
             foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # get rid of specks
-            foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=5)
             for ii in uni_chambers:
                 if ii > 0:  # 0 is background
                     foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
                     if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                         centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                     else:  # for subsequent frames use connected components and split those with multiple flies
-                        this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
+                        # if any flies outside of any component - grow blobs and repeat conn comps
+                        cnt = 0  # n-repeat of conn comp
+                        flycnt = [res.nflies] # init with all flies outside of conn comps
+                        # flybins = np.zeros((1,))
+                        while flycnt[0]>0:
+                            if cnt is not 0:  # do not display on first pass
+                                print(f"{flycnt[0]} outside of the conn comps - growing blobs")
+                            foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
+                            this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
-                        # print(this_size)
+                            # get conn comp each fly is in using previous position
+                            fly_conncomps = labeled_frame[np.uintp(old_centers[ii-1,:,0]), np.uintp(old_centers[ii-1,:,1])]
+                            # count number of flies per conn comp
+                            flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
+                            cnt += 1
+                        # bins -> conn comp ids
+                        flybins = np.uintp(flybins[1:]-0.5)
+                        # print(fly_conncomps)
+                        # print(flybins)
+                        # print(flycnt)
+
                         this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
                         labels = this_labels.copy()  # copy for new labels
-                        # maybe filter based on size of conn comps - get rid of very small ones
-
-                        # get conn comp each fly is in using previous position
-                        fly_conncomps = labeled_frame[np.uintp(old_centers[ii-1,:,0]), np.uintp(old_centers[ii-1,:,1])]
-                        # print(fly_conncomps)
-                        # count number of flies per conn comp
-                        flycnt, bins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
-                        # bins -> conn comp ids
-                        bins = np.uintp(bins[1:]-0.5)
-                        # print(bins)
-                        # print(flycnt)
                         # split conn compts with multiple flies using clustering
-                        for con in np.uintp(bins[flycnt>1]):
+                        for con in np.uintp(flybins[flycnt>1]):
                             # cluster points for current conn comp
                             con_frame = labeled_frame==con
-
                             # erode to increase separation between flies in a blob
-                            con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=4)
+                            # con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=5)
                             con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
-                            # delete old labels and points - if we erode we will have fewer points
-                            points = points[labels[:,0]!=con,:]
-                            labels = labels[labels[:,0]!=con]
-                            # append new labels and points
-                            labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
-                            points = np.append(points, con_points, axis=0)
+                            # with erosion:
+                            # # delete old labels and points - if we erode we will have fewer points
+                            # points = points[labels[:,0]!=con,:]
+                            # labels = labels[labels[:,0]!=con]
+                            # # append new labels and points
+                            # labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
+                            # points = np.append(points, con_points, axis=0)
+                            # w/o erosion:
+                            labels[this_labels==con] = np.max(labels)+10+con_labels[:, 0]
 
                         # make labels consecutive numbers again
                         new_labels = np.zeros_like(labels)
                         for cnt, label in enumerate(np.unique(labels)):
                             new_labels[labels==label] = cnt
                         labels = new_labels.copy()
-
+                        if np.unique(labels).shape[0]>res.nflies:
+                            import ipdb; ipdb.set_trace()
+                            # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
+                            # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
                         # calculate center values from new labels
                         for label in np.unique(labels):
                             centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
