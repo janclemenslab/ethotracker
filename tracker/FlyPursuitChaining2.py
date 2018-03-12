@@ -97,7 +97,7 @@ class Prc():
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
             foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # get rid of specks
-            foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=4)
+            foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=5)
             for ii in uni_chambers:
                 if ii > 0:  # 0 is background
                     foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
@@ -106,33 +106,46 @@ class Prc():
                     else:  # for subsequent frames use connected components and split those with multiple flies
                         this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
+                        print(this_size)
                         this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream 
                         labels = this_labels.copy()  # copy for new labels
                         # maybe filter based on size of conn comps - get rid of very small ones
 
                         # get conn comp each fly is in using previous position
                         fly_conncomps = labeled_frame[np.uintp(old_centers[ii-1,:,0]), np.uintp(old_centers[ii-1,:,1])]
+                        print(fly_conncomps)
                         # count number of flies per conn comp
                         flycnt, bins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
-                        # import ipdb; ipdb.set_trace()
                         # bins -> conn comp ids
                         bins = np.uintp(bins[1:]-0.5)
+                        print(bins)
+                        print(flycnt)
                         # split conn compts with multiple flies using clustering
                         for con in np.uintp(bins[flycnt>1]):
                             # cluster points for current conn comp
-                            con_centers, con_labels, con_points = fg.segment_cluster(labeled_frame==con, num_clusters=flycnt[con])
-                            # replace old labels with new labels
-                            labels[this_labels==con] = np.max(labels)+10+con_labels[:, 0]
+                            con_frame = labeled_frame==con
+
+                            # erode to increase separation between flies in a blob
+                            con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=4)
+                            con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
+                            # delete old labels and points - if we erode we will have fewer points
+                            points = points[labels[:,0]!=con,:]
+                            labels = labels[labels[:,0]!=con]
+                            # append new labels and points
+                            labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
+                            points = np.append(points, con_points, axis=0)
+
                         # make labels consecutive numbers again
                         new_labels = np.zeros_like(labels)
                         for cnt, label in enumerate(np.unique(labels)):
                             new_labels[labels==label] = cnt
                         labels = new_labels.copy()
+
                         # calculate center values from new labels
                         for label in np.unique(labels):
                             centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
 
-                        # fall back to fg.segment_cluster on error??
+                        # TODO: maybe fall back to fg.segment_cluster on error??
                         
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
@@ -227,7 +240,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         # frame_with_tracks = fg.annotate(frame[40:,:,:]/255,
                         #                                centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                         #                                lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
-                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[40:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
+                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[80:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
                                                         centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                                                         lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
 
