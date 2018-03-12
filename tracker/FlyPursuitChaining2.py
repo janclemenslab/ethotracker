@@ -19,7 +19,7 @@ plt.ion()
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res = Results()                     # init results object
-
+    import ipdb; ipdb.set_trace()
     bg = BackGround(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
@@ -53,6 +53,9 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.number_of_frames = int(vr.number_of_frames)
+    if res.number_of_frames<=0:
+        print('neg. number of frames detected - fallback to 3h recording')
+        res.number_of_frames = vr.frame_rate * 60 * 60 * 3  # fps*sec*min*hour
 
     res.centers = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
@@ -107,7 +110,7 @@ class Prc():
                         this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
                         print(this_size)
-                        this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream 
+                        this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
                         labels = this_labels.copy()  # copy for new labels
                         # maybe filter based on size of conn comps - get rid of very small ones
 
@@ -146,7 +149,7 @@ class Prc():
                             centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
 
                         # TODO: maybe fall back to fg.segment_cluster on error??
-                        
+
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
                             lines[ii-1, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
