@@ -108,10 +108,12 @@ class Prc():
                         # if any flies outside of any component - grow blobs and repeat conn comps
                         cnt = 0  # n-repeat of conn comp
                         flycnt = [res.nflies] # init with all flies outside of conn comps
-                        # flybins = np.zeros((1,))
-                        while flycnt[0]>0:
+                        max_repeats = 1  # only do this once
+                        while flycnt[0]>0 and cnt<max_repeats:
                             if cnt is not 0:  # do not display on first pass
                                 print(f"{flycnt[0]} outside of the conn comps - growing blobs")
+                                if flycnt[0]==res.nflies:
+                                    print('   something is wrong')
                             foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
                             this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
@@ -120,45 +122,47 @@ class Prc():
                             # count number of flies per conn comp
                             flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
                             cnt += 1
-                        # bins -> conn comp ids
-                        flybins = np.uintp(flybins[1:]-0.5)
-                        # print(fly_conncomps)
-                        # print(flybins)
-                        # print(flycnt)
+                        if flycnt[0]==0:  # if all flies are assigned a conn comp - proceed
+                            # bins -> conn comp ids
+                            flybins = np.uintp(flybins[1:]-0.5)
+                            # print(fly_conncomps)
+                            # print(flybins)
+                            # print(flycnt)
 
-                        this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
-                        labels = this_labels.copy()  # copy for new labels
-                        # split conn compts with multiple flies using clustering
-                        for con in np.uintp(flybins[flycnt>1]):
-                            # cluster points for current conn comp
-                            con_frame = labeled_frame==con
-                            # erode to increase separation between flies in a blob
-                            # con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=5)
-                            con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
-                            # with erosion:
-                            # # delete old labels and points - if we erode we will have fewer points
-                            # points = points[labels[:,0]!=con,:]
-                            # labels = labels[labels[:,0]!=con]
-                            # # append new labels and points
-                            # labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
-                            # points = np.append(points, con_points, axis=0)
-                            # w/o erosion:
-                            labels[this_labels==con] = np.max(labels)+10+con_labels[:, 0]
+                            this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
+                            labels = this_labels.copy()  # copy for new labels
+                            # split conn compts with multiple flies using clustering
+                            for con in np.uintp(flybins[flycnt>1]):
+                                # cluster points for current conn comp
+                                con_frame = labeled_frame==con
+                                # erode to increase separation between flies in a blob
+                                # con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=5)
+                                con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
+                                # with erosion:
+                                # # delete old labels and points - if we erode we will have fewer points
+                                # points = points[labels[:,0]!=con,:]
+                                # labels = labels[labels[:,0]!=con]
+                                # # append new labels and points
+                                # labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
+                                # points = np.append(points, con_points, axis=0)
+                                # w/o erosion:
+                                labels[this_labels==con] = np.max(labels)+10+con_labels[:, 0]
 
-                        # make labels consecutive numbers again
-                        new_labels = np.zeros_like(labels)
-                        for cnt, label in enumerate(np.unique(labels)):
-                            new_labels[labels==label] = cnt
-                        labels = new_labels.copy()
-                        if np.unique(labels).shape[0]>res.nflies:
-                            import ipdb; ipdb.set_trace()
-                            # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
-                            # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
-                        # calculate center values from new labels
-                        for label in np.unique(labels):
-                            centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
-
-                        # TODO: maybe fall back to fg.segment_cluster on error??
+                            # make labels consecutive numbers again
+                            new_labels = np.zeros_like(labels)
+                            for cnt, label in enumerate(np.unique(labels)):
+                                new_labels[labels==label] = cnt
+                            labels = new_labels.copy()
+                            if np.unique(labels).shape[0]>res.nflies:
+                                import ipdb; ipdb.set_trace()
+                                # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
+                                # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
+                            # calculate center values from new labels
+                            for label in np.unique(labels):
+                                centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
+                        else:  # if still flies w/o conn compp fall back to segment_cluster
+                            print(f"{flycnt[0]} outside of the conn comps - falling back to segment cluster - should mark frame as potential jump")
+                            centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
@@ -250,17 +254,18 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         chamberID = 0 # fix to work with multiple chambers
 
-                        # frame_with_tracks = fg.annotate(frame[40:,:,:]/255,
-                        #                                centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                        #                                lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
-                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[80:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
-                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        frame_with_tracks = fg.annotate(frame[80:,:,:]/255,
+                                                    centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
+                                                    lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        # frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[80:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
+                        #                                 centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
+                        #                                 lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
 
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
                         # fg.show(np.float32(frame_with_tracks)/255.0, autoscale=False)
-                        fg.show(frame_with_tracks)
+                        cv2.destroyAllWindows()
+                        fg.show(frame_with_tracks, window_name=f"{res.frame_count}")
 
                     # save annotated frame to video
                     if save_video:
