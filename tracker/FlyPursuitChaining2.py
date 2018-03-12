@@ -153,8 +153,8 @@ class Prc():
                             for cnt, label in enumerate(np.unique(labels)):
                                 new_labels[labels==label] = cnt
                             labels = new_labels.copy()
-                            if np.unique(labels).shape[0]>res.nflies:
-                                import ipdb; ipdb.set_trace()
+                            # if np.unique(labels).shape[0]>res.nflies:
+                                # import ipdb; ipdb.set_trace()
                                 # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
                                 # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
                             # calculate center values from new labels
