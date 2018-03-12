@@ -34,16 +34,13 @@ cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=
 
 # log file output
 if "-N" not in props["params"].get("LSF", ""):
-    cmdline += "-oo {logdir}/LSF-{jobname}.txt ".format(logdir=LOGDIR, jobname=jobname)
+    cmdline += "-oo {logdir}/{jobname}.txt ".format(logdir=LOGDIR, jobname=jobname)
 
 # # pass memory resource request to LSF
 # mem = props.get('resources', {}).get('mem')
 # if mem:
 #     cmdline += '-R "rusage[mem={}]" -M {} '.format(mem, 2 * int(mem))
 cmdline += '-R scratch ' # request nodes with access to scratch
-
-# # rule-specific LSF parameters (e.g. queue, runtime)
-# cmdline += props["params"].get("LSF", "") + " "
 
 # figure out job dependencies
 dependencies = set(sys.argv[1:-3])
