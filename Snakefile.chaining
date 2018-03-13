@@ -43,7 +43,7 @@ rule track:
         runtime="20:00",
         logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
-    shell: "python3 -m tracker.FlyPursuitChaining2 {input.video} -o -t 0.20 --nflies {params.nflies} --led_coords 0 -o" # force automatic detection of led corner
+    shell: "python3 -m tracker.FlyPursuitChaining2 {input.video} -t 0.20 --nflies {params.nflies} --led_coords 0" # force automatic detection of led corner
 
 rule postprocess:
    input:
