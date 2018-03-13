@@ -33,7 +33,9 @@ cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=
 # cmdline = 'bsub -J {jobname} -W {runtime}'.format(jobname=jobname, runtime="08:00")
 
 # log file output
-if "-N" not in props["params"].get("LSF", ""):
+if props["params"].get("logfile"):
+    cmdline += "-oo {logfile}".format(logfile=props["params"].get("file"))
+else:
     cmdline += "-oo {logdir}/{jobname}.txt ".format(logdir=LOGDIR, jobname=jobname)
 
 # # pass memory resource request to LSF
