@@ -122,7 +122,7 @@ class Prc():
                             # count number of flies per conn comp
                             flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
                             cnt += 1
-                        if flycnt[0]==0:  # if all flies are assigned a conn comp - proceed
+                        if flycnt[0]==0 and not np.any(flycnt[1:]==0):  # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                             # bins -> conn comp ids
                             flybins = np.uintp(flybins[1:]-0.5)
                             # print(fly_conncomps)
@@ -153,15 +153,15 @@ class Prc():
                             for cnt, label in enumerate(np.unique(labels)):
                                 new_labels[labels==label] = cnt
                             labels = new_labels.copy()
-                            # if np.unique(labels).shape[0]>res.nflies:
-                                # import ipdb; ipdb.set_trace()
+                            if np.unique(labels).shape[0]>res.nflies:
+                                import ipdb; ipdb.set_trace()
                                 # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
                                 # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
                             # calculate center values from new labels
                             for label in np.unique(labels):
                                 centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
                         else:  # if still flies w/o conn compp fall back to segment_cluster
-                            print(f"{flycnt[0]} outside of the conn comps - falling back to segment cluster - should mark frame as potential jump")
+                            print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:]==0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                             centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
@@ -254,7 +254,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         chamberID = 0 # fix to work with multiple chambers
 
-                        frame_with_tracks = fg.annotate(frame[80:,:,:]/255,
+                        frame_with_tracks = fg.annotate(frame[40:,:,:]/255,
                                                     centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                                                     lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
                         # frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[80:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
