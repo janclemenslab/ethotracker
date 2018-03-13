@@ -34,7 +34,7 @@ cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=
 
 # log file output
 if props["params"].get("logfile"):
-    cmdline += "-oo {logfile}".format(logfile=props["params"].get("logfile"))
+    cmdline += "-oo {logfile} ".format(logfile=props["params"].get("logfile"))
 else:
     cmdline += "-oo {logdir}/{jobname}.txt ".format(logdir=LOGDIR, jobname=jobname)
 
