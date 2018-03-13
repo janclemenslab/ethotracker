@@ -23,25 +23,27 @@ rule all:
 rule estimate_background:
     input: "/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4"
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
-    log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_bg.log"
+
     params:
         format="png",
-        nframes=1000
+        nframes=1000,
+        logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_bg.log",
     shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
     input:
         video="/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4",
-        background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
+        background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png",
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
-    log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log"
+    params:
+        logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log",
     shell: "python3 -m tracker.FlyPursuit {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
 
 rule postprocess:
     input:
         tracks = "/scratch/clemens10/playback/dat/{directory}/{directory}.h5",
     params:
-        snd_log = "/scratch/clemens10/playback/dat/{directory}/{directory}_snd.log", # param so submits if misssing
+        snd_log="/scratch/clemens10/playback/dat/{directory}/{directory}_snd.log", # param so submits if misssing,
+        logfile="/scratch/clemens10/playback/dat/{directory}/{directory}_post.log",
     output: "/scratch/clemens10/playback/res/{directory}_spd.h5"
-    log:    "/scratch/clemens10/playback/dat/{directory}/{directory}_post.log"
     shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {params.snd_log} {output}"

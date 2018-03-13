@@ -28,10 +28,10 @@ rule all:
 rule estimate_background:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
-    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log",
     params:
         format="png",
         nframes=1000,
+        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log",
     shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
@@ -41,15 +41,15 @@ rule track:
     params:
         nflies=readNflies,
         runtime="20:00",
+        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
-    log:    "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
     shell: "python3 -m tracker.FlyPursuitChaining2 {input.video} -o -t 0.20 --nflies {params.nflies} --led_coords 0 -o" # force automatic detection of led corner
 
 rule postprocess:
    input:
-       tracks = "/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+       tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
    params:
-       snd_logs = "/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
+       snd_logs="/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
+       logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
-   log:    "/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {params.snd_logs} {output}"
