@@ -135,7 +135,7 @@ if __name__ == '__main__':
         good_idx = (led_onsets - chunkpre + chunklen) <= spd.shape[0]  # ensure we don't exceed bounds - ignore too late LEDs
         trial_traces = chunk_data(spd, led_onsets[good_idx] - chunkpre, chunklen)
         # calc base line and test spd
-        spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
+        spd_test = np.nanmean(trial_traces[3000:3400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
 
         # try to load log file and compute trial averages
