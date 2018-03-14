@@ -122,7 +122,9 @@ class Prc():
                             # count number of flies per conn comp
                             flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
                             cnt += 1
-                        if flycnt[0]==0 and not np.any(flycnt[1:]==0):  # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
+                        # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
+                        # alternatively, we could simply "delete" empty conn comps
+                        if flycnt[0]==0 and not np.any(flycnt[1:]==0):
                             # bins -> conn comp ids
                             flybins = np.uintp(flybins[1:]-0.5)
                             # print(fly_conncomps)
@@ -316,7 +318,7 @@ if __name__ == "__main__":
     parser.add_argument('--nflies', type=int, default=1, help='number of flies in video')
     parser.add_argument('-d', '--display', type=int, default=None, help='show every Nth frame')
     parser.add_argument('-t', '--threshold', type=float, default=0.4, help='threshold for foreground detection, defaults to 0.3')
-    parser.add_argument('-s', '--start_frame', type=float, default=0, help='first frame to track, defaults to 0')
+    parser.add_argument('-s', '--start_frame', type=float, default=None, help='first frame to track, defaults to 0')
     parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
     parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
     parser.add_argument('--save_video', action='store_true', help='save annotated vid with tracks')
