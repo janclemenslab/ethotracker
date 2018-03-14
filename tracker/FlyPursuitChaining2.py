@@ -134,9 +134,9 @@ class Prc():
                             this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
                             labels = this_labels.copy()  # copy for new labels
                             # split conn compts with multiple flies using clustering
-                            for con in np.uintp(flybins[flycnt>1]):
+                            for con in np.uintp(flybins[flycnt > 1]):
                                 # cluster points for current conn comp
-                                con_frame = labeled_frame==con
+                                con_frame = labeled_frame == con
                                 # erode to increase separation between flies in a blob
                                 # con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=5)
                                 con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
@@ -148,7 +148,7 @@ class Prc():
                                 # labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
                                 # points = np.append(points, con_points, axis=0)
                                 # w/o erosion:
-                                labels[this_labels==con] = np.max(labels)+10+con_labels[:, 0]
+                                labels[this_labels == con] = np.max(labels) + 10 + con_labels[:, 0]
 
                             # make labels consecutive numbers again
                             new_labels = np.zeros_like(labels)
