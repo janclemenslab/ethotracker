@@ -198,6 +198,48 @@ def get_chaining(lines, chamber_number=0):
         header[0:header_this.shape[0],T] = header_this
     return chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh
 
+
+def get_chainlength(chainer, chainee, nflies):
+    # calculate chain length
+    # TODO: [-] this will ignore circles since there is no seed - a fly that chains but is not a chainee
+    #       [x] very slow... - will run endlessly if there is a loop
+    nframes = chainer.shape[0]
+
+    chain_length = np.zeros((nflies*2, nframes), dtype=np.uint16)
+    for frame_number in range(0, nframes):
+        # if frame_number % 10000==0:
+        #     print(frame_number)
+        # find starters of chain - flies that are chainer but not chainees
+        chain_seeds = [x for x in chainer[:, frame_number] if not x in chainee[:, frame_number]]
+
+        # for each starter - get chain
+        chain = [-1]*len(chain_seeds)
+        for chain_count, chain_seed in enumerate(chain_seeds):
+            chain[chain_count] = [chain_seed]
+            chain_link = [chain_seed]
+            idx = 1
+            while len(chain_link):
+                idx, = np.where(chainer[:, frame_number] == chain_link)
+                chain_link = chainee[idx, frame_number].tolist()
+                try:
+                    if chain_link[0] not in chain[chain_count]:
+                        chain[chain_count].append(chain_link[0])
+                    else:
+                        break  # avoid loop where chainee chains chainer
+                except IndexError as e:
+                    pass
+        # find chainers that are not accounted for - these may be part of a circle...
+        flat_list = [item for ch in chain for item in ch[:-1]]  # flatten list excluding last in chain
+        leftovers = [x for x in flat_list if not x in chainer[:, frame_number]]  # count
+        if leftovers:
+            chain.append(leftovers)
+
+        this_chain_len = [len(x) for x in chain]
+        chain_length[:len(this_chain_len), frame_number] = this_chain_len
+    #     print(f"found {len(chain_seeds)} chains with {this_chain_len} flies: {chain}")
+    return chain_length
+
+
 def stats_by_group(data, grouping, fun):
     # TODO: pass through args and kwargs for fun
 
@@ -226,10 +268,12 @@ if __name__ == '__main__':
     # fix lines and get chaining IndexError
     lines_fixed = fix_orientations(lines)
     chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number=0)
+    chain_length = get_chainlength(chainer, chainee, nflies)
     # save fixed lines and chaining data_chunks
     print(f'saving chaining data to {save_file_name}')
     with h5py.File(save_file_name, 'w') as f:
         f.create_dataset('lines_fixed', data=lines_fixed, compression='gzip')
+        f.create_dataset('chain_length', data=chain_length, compression='gzip')
         f.create_dataset('chainer', data=chainer, compression='gzip')
         f.create_dataset('chainee', data=chainee, compression='gzip')
         f.create_dataset('header', data=header, compression='gzip')
@@ -245,7 +289,7 @@ if __name__ == '__main__':
     # plot LEDs and save fig
     try:
         plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
-    except:
+    except Exception as e:
         pass
 
     if len(led_onsets):
@@ -284,7 +328,7 @@ if __name__ == '__main__':
             stimnames = ['unknown']
 
         print(f'saving to {save_file_name}')
-        with h5py.File(save_file_name, 'w') as f:
+        with h5py.File(save_file_name, 'a') as f:
             f.create_dataset('spd_base', data=spd_base, compression='gzip')
             f.create_dataset('spd_test', data=spd_test, compression='gzip')
             f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
