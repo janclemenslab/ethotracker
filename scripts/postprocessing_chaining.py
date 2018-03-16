@@ -17,7 +17,7 @@ def load_data(file_name):
     pos = pos[start_frame + 1:-1000, :, :]
     led = led[start_frame + 1:-1000, 0].T
 
-    nflies = pos.shape[1]
+    nflies = pos.shape[2]
     return pos, lines, led, nflies
 
 
@@ -203,7 +203,7 @@ def get_chainlength(chainer, chainee, nflies):
     # calculate chain length
     # TODO: [-] this will ignore circles since there is no seed - a fly that chains but is not a chainee
     #       [x] very slow... - will run endlessly if there is a loop
-    nframes = chainer.shape[0]
+    nframes = chainer.shape[1]
 
     chain_length = np.zeros((nflies*2, nframes), dtype=np.uint16)
     for frame_number in range(0, nframes):
