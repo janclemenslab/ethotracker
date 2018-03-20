@@ -1,12 +1,14 @@
+"""Detect and count chains."""
 import numpy as np
 import scipy.spatial
 
 
 def get_chaining(lines, chamber_number=0):
+    """Determine interactions: chaining based on head-tail distance and angle, head-butting based on head-head distances and angles."""
     nframes = lines.shape[0]
     nflies = lines.shape[2]
-    tails = lines[:,chamber_number,:,0,:]
-    heads = lines[:,chamber_number,:,1,:]
+    tails = lines[:, chamber_number, :, 0, :]
+    heads = lines[:, chamber_number, :, 1, :]
 
     D_h2t = np.zeros((nflies, nflies, nframes))
     D_h2h = np.zeros((nflies, nflies, nframes))
@@ -18,33 +20,33 @@ def get_chaining(lines, chamber_number=0):
     headee = -np.ones((nflies*nflies, nframes), dtype=np.int16)
     header = -np.ones((nflies*nflies, nframes), dtype=np.int16)
 
-    for frame_number in range(0,nframes):
+    for frame_number in range(0, nframes):
         T = frame_number
-        D_h2t[:,:,T] = scipy.spatial.distance.cdist(tails[T,:,:], heads[T,:,:], metric='euclidean')
-        D_h2h[:,:,T] = scipy.spatial.distance.cdist(heads[T,:,:], heads[T,:,:], metric='euclidean')
+        D_h2t[:, :, T] = scipy.spatial.distance.cdist(tails[T, :, :], heads[T, :, :], metric='euclidean')
+        D_h2h[:, :, T] = scipy.spatial.distance.cdist(heads[T, :, :], heads[T, :, :], metric='euclidean')
 
-        flylength = np.diag(D_h2t[:,:,T])  # diagonals contain tail->head distances=fly lengths
-        min_distance = np.min(flylength)  # interaction distance is flylength+x
-        Dc[:,:,T] = D_h2t[:,:,T]<min_distance   # chaining
-        Dh[:,:,T] = D_h2h[:,:,T]<min_distance/2 # head-butting
+        flylength = np.diag(D_h2t[:, :, T])  # diagonals contain tail->head distances=fly lengths
+        min_distance = np.min(flylength)     # interaction distance is flylength+x
+        Dc[:, :, T] = D_h2t[:, :, T] < min_distance    # chaining
+        Dh[:, :, T] = D_h2h[:, :, T] < min_distance/2  # head-butting
         # ignore diagonal entries
-        np.fill_diagonal(Dc[:,:,T], False)
-        np.fill_diagonal(Dh[:,:,T], False)
+        np.fill_diagonal(Dc[:, :, T], False)
+        np.fill_diagonal(Dh[:, :, T], False)
 
         # get x,y coords of interacting flies
-        chainee_this, chainer_this = np.where(Dc[:,:,T])
-        headee_this, header_this = np.where(Dh[:,:,T])
+        chainee_this, chainer_this = np.where(Dc[:, :, T])
+        headee_this, header_this = np.where(Dh[:, :, T])
 
         # save all in list
-        chainee[0:chainee_this.shape[0],T] = chainee_this
-        chainer[0:chainer_this.shape[0],T] = chainer_this
-        headee[0:headee_this.shape[0],T] = headee_this
-        header[0:header_this.shape[0],T] = header_this
+        chainee[0:chainee_this.shape[0], T] = chainee_this
+        chainer[0:chainer_this.shape[0], T] = chainer_this
+        headee[0:headee_this.shape[0], T] = headee_this
+        header[0:header_this.shape[0], T] = header_this
     return chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh
 
 
 def get_chainlength(chainer, chainee, nflies):
-    # calculate chain length
+    """Calculate chain length from chainer/chainee lists."""
     # TODO: [-] this will ignore circles since there is no seed - a fly that chains but is not a chainee
     #       [x] very slow... - will run endlessly if there is a loop
     nframes = chainer.shape[1]
@@ -81,5 +83,4 @@ def get_chainlength(chainer, chainee, nflies):
 
         this_chain_len = [len(x) for x in chain]
         chain_length[:len(this_chain_len), frame_number] = this_chain_len
-    #     print(f"found {len(chain_seeds)} chains with {this_chain_len} flies: {chain}")
     return chain_length
