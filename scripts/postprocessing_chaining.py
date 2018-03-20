@@ -4,11 +4,10 @@ import h5py
 import sys
 import peakutils
 import os
+import scipy.signal
 from post.networkmotifs import *
 from post.chainingindex import *
 from post.fixtracks import *
-# import networkx as nx
-# import itertools
 
 
 def load_data(file_name):
@@ -42,7 +41,7 @@ def parse_prot(filename):
 
 
 def get_led_peaks(led, thres=0.8, min_interval=0):
-    led_diff = np.diff(signal.savgol_filter(led, 11, 6)).T
+    led_diff = np.diff(scipy.signal.savgol_filter(led, 11, 6)).T
     led_onsets = peakutils.indexes(led_diff, thres=thres)
     led_offsets = peakutils.indexes(-led_diff, thres=thres)
 
@@ -144,17 +143,17 @@ if __name__ == '__main__':
         f.create_dataset('Dh', data=Dh, compression='gzip')
 
     # network motifs
-    motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
-    with h5py.File(save_file_name, 'a') as f:
-        f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
-        # f.create_dataset('motifs', data=motifs, compression='gzip')
+    # motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
+    # with h5py.File(save_file_name, 'a') as f:
+    #     f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
+    #     # f.create_dataset('motifs', data=motifs, compression='gzip')
 
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led[0], thres=0.8, min_interval=1000)
     print(led_onsets)
     # plot LEDs and save fig
     try:
-        plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
+        plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0] + '.png')
     except Exception as e:
         pass
 
