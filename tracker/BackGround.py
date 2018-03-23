@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from .VideoReader import VideoReader, video_file
+from .VideoReader import video_file
 import argparse
 import os
 
@@ -13,7 +13,7 @@ class BackGround():
           background_count - number of frames which have been averaged to get `background`
        METHODS
           estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
-          #update(frame) - background with frmae
+          update(frame) - background with frame
           save(file_name) - save `background` to file_name.PNG
           load(file_name) - load `background` from file_name (uses cv2.imread)
     """
@@ -56,12 +56,37 @@ class BackGround():
             pass
 
 
+class BackGroundMax(BackGround):
+
+    def estimate(self, num_bg_frames=100, start_frame=1):
+        """estimate back ground from video
+              num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
+        """
+        frame_numbers = np.linspace(start_frame, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
+        # self.frames = np.nan * np.zeros((num_bg_frames, self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels), dtype=np.uint8)
+        for idx, fr in enumerate(frame_numbers):
+            ret, frame = self.vr.read(fr)
+            if ret and frame is not None:
+                self.update(frame)
+
+    def update(self, frame):
+        """updates background (mean frame) with `frame`"""
+        # self.frames.append(frame)
+        self.background = np.maximum(frame, self.background)  # element-wise max operation
+        self.background_count += 1
+
+
+class BackGroundMedian(BackGround):
+    pass
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', type=str, help='video file to process')
     parser.add_argument('-n', '--num_bg_frames', type=int, default=100, help='number of frames for estimating background (100)')
     parser.add_argument('-f', '--format', type=str, default='png', help='image format for background (png)')
     parser.add_argument('-s', '--savebin', action='store_true', help='save as binary matrix (npy-format)')
+    parser.add_argument('-t', '--type', action='store', choices=['mean','max'], default='mean')
 
     args = parser.parse_args()
 
