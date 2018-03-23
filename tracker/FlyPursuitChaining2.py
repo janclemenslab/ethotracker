@@ -9,7 +9,7 @@ import traceback
 import os
 
 from .VideoReader import VideoReader
-from .BackGround import BackGround
+from .BackGround import BackGroundMax
 from .Results import Results
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
@@ -19,16 +19,16 @@ plt.ion()
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res = Results()                     # init results object
-    bg = BackGround(vr)
+    bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
     vr.reset()
     # detect chambers
-    res.chambers = np.ones_like(res.background).astype(np.uint8)#fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
+    # res.chambers = np.ones_like(res.background).astype(np.uint8)  #fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
+    res.chambers, circles = fg.get_chambers_chaining(res.background)
     # res.chambers[:10,:] = 0
 
-
-    res.chambers[:40,:] = 0
+    # res.chambers[:140, :140] = 0
     # printf('found {0} chambers'.format( np.unique(res.chambers).shape[0]-1 ))
 
     # detect empty chambers
@@ -114,7 +114,7 @@ class Prc():
                                 print(f"{flycnt[0]} outside of the conn comps - growing blobs")
                                 if flycnt[0]==res.nflies:
                                     print('   something is wrong')
-                            foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
+                            # foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
                             this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
                             # get conn comp each fly is in using previous position
@@ -251,17 +251,19 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                     res.led[res.frame_count] = np.mean(fg.crop(frame[:, :, 0], led_coords))
                     # get annotated frame if necessary
                     if save_video or (display is not None and res.frame_count % display == 0):
-                        # frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground), cv2.COLOR_GRAY2RGB),
-                        #                                 centers=np.clip(np.uint(res.centers[res.frame_count, 0, :, :]),0,10000),
-                        #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         chamberID = 0 # fix to work with multiple chambers
+                        uni_chambers = np.unique(res.chambers).astype(np.int)
+                        chamber_slices = [None] * int(res.nchambers + 1)
+                        for ii in uni_chambers:
+                            chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
+                                                        res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
 
-                        frame_with_tracks = fg.annotate(frame[40:,:,:]/255,
-                                                    centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                                                    lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
-                        # frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[80:,:]), cv2.COLOR_GRAY2RGB).astype(np.float32),
-                        #                                 centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                        #                                 lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        # frame_with_tracks = fg.annotate(frame[chamber_slices[chamberID+1],:]/255,
+                        #                             centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
+                        #                             lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32),
+                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
+                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
 
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
