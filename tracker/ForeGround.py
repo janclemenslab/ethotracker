@@ -171,8 +171,26 @@ def get_chambers(background, chamber_threshold=0.6, min_size=40000, max_size=500
     return labeled_frame
 
 
+def get_chambers_chaining(background):
+    """Find circular chamber."""
+    # find circlular chamber
+    circles = None  # init
+    p1 = 200  # initial parameter
+    while circles is None:  # as long as there is no chamber
+        circles = cv2.HoughCircles(background.astype(np.uint8),cv2.HOUGH_GRADIENT,1,100, param1=p1,param2=40,minRadius=int(background.shape[0]/3),maxRadius=int(background.shape[0]/2))
+        p1 = p1-10  # slowly decrease param
+    circles = np.uint16(np.around(circles))
+
+    # create binary mask
+    mask = np.zeros(background.shape, dtype=np.uint8)
+    for i in circles[0,:]:
+        cv2.circle(mask,(i[0],i[1]),i[2]+30,255,-1)
+    mask = mask > 0  # make binary
+    return mask, circles
+
+
 def get_bounding_box(labeled_frame):
-    """get bounding boxes of all components"""
+    """Get bounding boxes of all components."""
     uni_labels = np.unique(labeled_frame)
     bounding_box = np.ndarray((np.max(uni_labels) + 1, 2, 2), dtype=np.int)
     for ii in range(uni_labels.shape[0]):
