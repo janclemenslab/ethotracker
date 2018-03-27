@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, annotationfilename=None):
     # TODO:
     #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
     #  provide these as args, if no chamber mask and box use full frame
@@ -115,7 +115,7 @@ class Prc():
                         cnt = 0  # n-repeat of conn comp
                         flycnt = [res.nflies] # init with all flies outside of conn comps
                         max_repeats = 2  # only do this once
-                        while flycnt[0]>0 and cnt<max_repeats:
+                        while flycnt[0] > 0 and cnt < max_repeats:
                             if cnt is not 0:  # do not display on first pass
                                 print(f"{flycnt[0]} outside of the conn comps - growing blobs")
                                 if flycnt[0]==res.nflies:
@@ -128,14 +128,15 @@ class Prc():
                             # count number of flies per conn comp
                             flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
                             cnt += 1
+
                         # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                         # alternatively, we could simply "delete" empty conn comps
-                        if flycnt[0]==0 and not np.any(flycnt[1:]==0):
-                            flybins = np.uintp(flybins[1:]-0.5)
+                        if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
+                            flybins = np.uintp(flybins[1:] - 0.5)
                             this_labels = np.reshape(this_labels, (this_labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
                             centers[ii-1, :, :], labels, points, = fg.split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, res.nflies)
                         else:  # if still flies w/o conn compp fall back to segment_cluster
-                            print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:]==0)} is empty - falling back to segment cluster - should mark frame as potential jump")
+                            print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                             centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
