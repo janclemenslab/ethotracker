@@ -49,7 +49,7 @@ class BackGround():
 
     def save_binary(self, file_name):
         """Save `background` as file_name.NPY for later reference"""
-        return np.savez(file_name, slef.background)
+        return np.savez(file_name, self.background)
 
     def load(self, file_name):
         """load `background` from file_name"""
