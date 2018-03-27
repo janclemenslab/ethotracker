@@ -118,10 +118,48 @@ def segment_center_of_mass(frame):
 
 
 def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100, 0.01), init_method=cv2.KMEANS_PP_CENTERS):
-    """cluster points to get fly positions"""
+    """Cluster points to get fly positions."""
     points = getpoints(frame)
     # points = samplepoints(frame)
     cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=100, flags=init_method)
+    return centers, labels, points
+
+
+def split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
+    """Split conn compts containing more than one fly."""
+    labels = this_labels.copy()  # copy for new labels
+    # split conn compts with multiple flies using clustering
+    for con in np.uintp(flybins[flycnt > 1]):
+        # cluster points for current conn comp
+
+        con_frame = labeled_frame == con
+        # erode to increase separation between flies in a blob
+        if do_erode:
+            con_frame = erode(con_frame.astype(np.uint8), kernel_size=5)
+        con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
+        if do_erode:  # with erosion:
+            # delete old labels and points - if we erode we will have fewer points
+            points = points[labels[:, 0] != con,:]
+            labels = labels[labels[:, 0] != con]
+            # append new labels and points
+            labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
+            points = np.append(points, con_points, axis=0)
+        else:  # w/o erosion:
+            labels[this_labels == con] = np.max(labels) + 10 + con_labels[:, 0]
+
+    # make labels consecutive numbers again
+    new_labels = np.zeros_like(labels)
+    for cnt, label in enumerate(np.unique(labels)):
+        new_labels[labels == label] = cnt
+    labels = new_labels.copy()
+    # if np.unique(labels).shape[0]>nflies:
+    # import ipdb; ipdb.set_trace()
+    # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
+    # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
+    # calculate center values from new labels
+    centers = np.zeros((nflies, 2))
+    for label in np.unique(labels):
+        centers[label, :] = np.median(points[labels[:, 0] == label, :], axis=0)
     return centers, labels, points
 
 
