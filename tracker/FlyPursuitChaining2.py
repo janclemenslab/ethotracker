@@ -1,12 +1,12 @@
+"""Track chaining videos."""
 import numpy as np
 import cv2
 import argparse
-# import pyprind
-from multiprocessing import Process, current_process
 import time
 import sys
 import traceback
 import os
+import yaml
 
 from .VideoReader import VideoReader
 from .BackGround import BackGroundMax
@@ -17,42 +17,46 @@ import tracker.Tracker as tk
 import matplotlib.pyplot as plt
 plt.ion()
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
+
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
+    # TODO:
+    #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
+    #  provide these as args, if no chamber mask and box use full frame
+    #  chambers are detected automatically - e.g. in playback - or manually annotated
+    #  should be: binary image for mask and rect corrds for box (or infer box from mask)
+    #  background should be: matrix
+
     res = Results()                     # init results object
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
     vr.reset()
-    # detect chambers
-    # res.chambers = np.ones_like(res.background).astype(np.uint8)  #fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=7)
-    res.chambers, circles = fg.get_chambers_chaining(res.background)
-    # res.chambers[:10,:] = 0
 
-    # res.chambers[:140, :140] = 0
-    # printf('found {0} chambers'.format( np.unique(res.chambers).shape[0]-1 ))
+    # load annotation filename
+    annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
+    with open(annotationfilename, 'r') as stream:
+        a = yaml.load(stream)
 
-    # detect empty chambers
-    # vr.seek(start_frame)
-    # # 1. read frame and get foreground
-    # ret, frame = vr.read()
-    # foreground = fg.threshold(res.background - frame[:, :, 0], threshold * 255)
-    # # fg.show(foreground)
-    # # 2. segment and get flies and remove chamber if empty or "fly" too small
-    # labels = np.unique(res.chambers)
-    # area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
-    # labels[area < 20] = 0                                                  # mark empty chambers for deletion
-    # res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
+    # LED mask
+    res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
+    res.led_mask = cv2.circle(res.led_mask, (int(a['rectCenterX']), int(a['rectCenterY'])), int(a['rectRadius']), color=[1, 1, 1], thickness=-1)
+    res.led_coords = fg.get_bounding_box(res.led_mask)  # get bounding boxes of remaining chambers
+    # chambers mask
+    res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
+    res.chambers = cv2.circle(res.chambers, (int(a['centerX']), int(a['centerY'])), int(a['radius']), color=[1, 1, 1], thickness=-1)
+
+    # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
-    res.chambers_bounding_box[0] = [[0,0],[res.background.shape[0], res.background.shape[1]]]
+    res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
     # init Results structure
-    res.nflies = int(nflies)
+    res.nflies = int(a['nFlies'])
     res.nchambers = int(np.max(res.chambers))
     res.file_name = file_name
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.number_of_frames = int(vr.number_of_frames)
-    if res.number_of_frames<=0:
+    if res.number_of_frames <= 0:
         print('neg. number of frames detected - fallback to 3h recording')
         res.number_of_frames = vr.frame_rate * 60 * 60 * 3  # fps*sec*min*hour
 
@@ -60,11 +64,13 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000):
     res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
     res.lines = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
     res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
+    res.quality = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
+    res.frame_error = np.zeros((res.number_of_frames + 1000, res.nchambers, 1), dtype=np.uint8)
+    res.frame_error_codes = None  # should be dictionary mapping error codes to messages
     # save initialized results object
     res.status = "initialized"
     res.save(file_name=file_name[0:-4] + '.h5')
-    # printf('saving init')
-    print('found {0} fly bearing chambers'.format( res.nchambers ))
+    print(f'found {res.nchambers} fly bearing chambers')
     return res
 
 
@@ -108,13 +114,13 @@ class Prc():
                         # if any flies outside of any component - grow blobs and repeat conn comps
                         cnt = 0  # n-repeat of conn comp
                         flycnt = [res.nflies] # init with all flies outside of conn comps
-                        max_repeats = 1  # only do this once
+                        max_repeats = 2  # only do this once
                         while flycnt[0]>0 and cnt<max_repeats:
                             if cnt is not 0:  # do not display on first pass
                                 print(f"{flycnt[0]} outside of the conn comps - growing blobs")
                                 if flycnt[0]==res.nflies:
                                     print('   something is wrong')
-                            # foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
+                                foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
                             this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
                             # get conn comp each fly is in using previous position
@@ -125,43 +131,9 @@ class Prc():
                         # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                         # alternatively, we could simply "delete" empty conn comps
                         if flycnt[0]==0 and not np.any(flycnt[1:]==0):
-                            # bins -> conn comp ids
                             flybins = np.uintp(flybins[1:]-0.5)
-                            # print(fly_conncomps)
-                            # print(flybins)
-                            # print(flycnt)
-
-                            this_labels = np.reshape(this_labels, (this_labels.shape[0],1)) # make (n,1), not (n,) for compatibility downstream
-                            labels = this_labels.copy()  # copy for new labels
-                            # split conn compts with multiple flies using clustering
-                            for con in np.uintp(flybins[flycnt > 1]):
-                                # cluster points for current conn comp
-                                con_frame = labeled_frame == con
-                                # erode to increase separation between flies in a blob
-                                # con_frame = fg.erode(con_frame.astype(np.uint8), kernel_size=5)
-                                con_centers, con_labels, con_points = fg.segment_cluster(con_frame, num_clusters=flycnt[con])
-                                # with erosion:
-                                # # delete old labels and points - if we erode we will have fewer points
-                                # points = points[labels[:,0]!=con,:]
-                                # labels = labels[labels[:,0]!=con]
-                                # # append new labels and points
-                                # labels = np.append(labels, np.max(labels)+10+con_labels, axis=0)
-                                # points = np.append(points, con_points, axis=0)
-                                # w/o erosion:
-                                labels[this_labels == con] = np.max(labels) + 10 + con_labels[:, 0]
-
-                            # make labels consecutive numbers again
-                            new_labels = np.zeros_like(labels)
-                            for cnt, label in enumerate(np.unique(labels)):
-                                new_labels[labels==label] = cnt
-                            labels = new_labels.copy()
-                            if np.unique(labels).shape[0]>res.nflies:
-                                import ipdb; ipdb.set_trace()
-                                # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
-                                # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
-                            # calculate center values from new labels
-                            for label in np.unique(labels):
-                                centers[ii-1, label, :] = np.median(points[labels[:,0]==label,:], axis=0)
+                            this_labels = np.reshape(this_labels, (this_labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
+                            centers[ii-1, :, :], labels, points, = fg.split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, res.nflies)
                         else:  # if still flies w/o conn compp fall back to segment_cluster
                             print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:]==0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                             centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
@@ -240,7 +212,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         ret = True
         frame_processor = Prc(res)
 
-        while(ret and res.frame_count < vr.number_of_frames + 1001):
+        while(ret and res.frame_count < res.number_of_frames + 1001):
             ret, frame = vr.read()
             if not ret:
                 printf("frame returned False")
@@ -261,9 +233,10 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         # frame_with_tracks = fg.annotate(frame[chamber_slices[chamberID+1],:]/255,
                         #                             centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
                         #                             lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
-                        frame_with_tracks = fg.annotate(cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32),
-                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
+                        frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        frame_with_tracks = fg.annotate(frame_with_tracks,
+                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
+                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
 
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
@@ -273,7 +246,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
                     # save annotated frame to video
                     if save_video:
-                        vw.write(np.uint8(frame_with_tracks[0:frame_size[0], 0:frame_size[1], :]))
+                        vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
 
                     if res.frame_count % 1000 == 0:
                         printf('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
