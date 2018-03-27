@@ -142,11 +142,11 @@ if __name__ == '__main__':
         f.create_dataset('Dc', data=Dc, compression='gzip')
         f.create_dataset('Dh', data=Dh, compression='gzip')
 
-    network motifs
-    motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
-    with h5py.File(save_file_name, 'a') as f:
-        f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
-        # f.create_dataset('motifs', data=motifs, compression='gzip')
+    # # network motifs
+    # motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
+    # with h5py.File(save_file_name, 'a') as f:
+    #     f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
+    #     # f.create_dataset('motifs', data=motifs, compression='gzip')
 
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led[0], thres=0.8, min_interval=1000)
