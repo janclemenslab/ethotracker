@@ -108,9 +108,16 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--type', action='store', choices=['mean','max', 'median'], default='mean')
 
     args = parser.parse_args()
+    print(args)
 
     with video_file(args.filename) as vr:
-        bg = BackGround(vr)
+        if args.type == 'max':
+            bg = BackGroundMax(vr)
+        elif args.type == 'median':
+            bg = BackGroundMedian(vr)
+        else:
+            bg = BackGround(vr)
+
         bg.estimate(num_bg_frames=args.num_bg_frames)
 
         if args.format is not None:
