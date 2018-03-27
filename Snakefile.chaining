@@ -39,8 +39,9 @@ rule estimate_background:
     params:
         format="png",
         nframes=1000,
+        type="max",
         logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log",
-    shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
+    shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input} -t {param.type}"
 
 rule track:
     input:
