@@ -92,7 +92,10 @@ class Prc():
         lines = np.zeros((res.nchambers, res.nflies, 2, 2))
         old_lines = None
 
+        frame_error = np.zeros((res.nchambers, 1), dtype=np.uint8)
+
         area = np.zeros((1, res.nchambers, res.nflies))
+
         uni_chambers = np.unique(res.chambers).astype(np.int)
         chamber_slices = [None] * int(res.nchambers + 1)
         for ii in uni_chambers:
@@ -110,23 +113,27 @@ class Prc():
                     foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
                     if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                         centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                        frame_error[ii-1] = 1
                     else:  # for subsequent frames use connected components and split those with multiple flies
                         # if any flies outside of any component - grow blobs and repeat conn comps
                         cnt = 0  # n-repeat of conn comp
-                        flycnt = [res.nflies] # init with all flies outside of conn comps
-                        max_repeats = 2  # only do this once
-                        while flycnt[0] > 0 and cnt < max_repeats:
-                            if cnt is not 0:  # do not display on first pass
-                                print(f"{flycnt[0]} outside of the conn comps - growing blobs")
-                                if flycnt[0]==res.nflies:
-                                    print('   something is wrong')
-                                foreground_cropped = fg.dilate(foreground_cropped.astype(np.uint8), kernel_size=5)
-                            this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
+                        flycnt = [res.nflies]  # init with all flies outside of conn comps
+                        max_repeats = 5  # only do this twice - first pass uses raw foreground, second pass uses dilated foreground
+                        # foreground_cropped_disposable = foreground_cropped.copy()  # use this for dilation so we assign conn comps to fly positions from previous frame
+                        this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
+                        labeled_frame_id = labeled_frame.copy().astype(np.uint8)
+                        while flycnt[0] > 0 and cnt < max_repeats:  # flies outside of conn comps
+                            if cnt is not 0:  # do not display on first pass
+                                # print(f"{flycnt[0]} outside of the conn comps - growing blobs")
+                                if flycnt[0] == res.nflies:
+                                    print('   something is wrong')
+                                labeled_frame_id = fg.dilate(labeled_frame_id, kernel_size=3)
+                                frame_error[ii-1] = 2
                             # get conn comp each fly is in using previous position
-                            fly_conncomps = labeled_frame[np.uintp(old_centers[ii-1,:,0]), np.uintp(old_centers[ii-1,:,1])]
+                            fly_conncomps = labeled_frame_id[np.uintp(old_centers[ii-1, :, 0]), np.uintp(old_centers[ii-1, :, 1])]
                             # count number of flies per conn comp
-                            flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5+ np.arange(np.max(labeled_frame+2)))
+                            flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5 + np.arange(np.max(labeled_frame+2)))
                             cnt += 1
 
                         # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
@@ -134,10 +141,11 @@ class Prc():
                         if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
                             flybins = np.uintp(flybins[1:] - 0.5)
                             this_labels = np.reshape(this_labels, (this_labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
-                            centers[ii-1, :, :], labels, points, = fg.split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, res.nflies)
+                            centers[ii-1, :, :], labels, points, = fg.split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, res.nflies, do_erode=False)
                         else:  # if still flies w/o conn compp fall back to segment_cluster
                             print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                             centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                            frame_error[ii-1] = 3
 
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
@@ -160,6 +168,7 @@ class Prc():
 
             res.centers[res.frame_count, :, :, :] = centers
             res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
+            res.frame_error[res.frame_count, :, :] = frame_error
             res.area[res.frame_count, :] = 0
             yield res, foreground
 
@@ -230,14 +239,11 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         for ii in uni_chambers:
                             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
                                                         res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
-
-                        # frame_with_tracks = fg.annotate(frame[chamber_slices[chamberID+1],:]/255,
-                        #                             centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]),0,10000),
-                        #                             lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]),0,10000))
                         frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        # frame_with_tracks = cv2.cvtColor(np.uint8(frame[:,:,0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
-                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
-                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
+                                                     centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
+                                                     lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
 
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
