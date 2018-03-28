@@ -161,7 +161,7 @@ def getStartTime(dirName):
 def convert(filename):
     """Convert old annotation format to dict"""
     annotation = dict()
-    with open('/Users/jclemens/localhost-20180313_144842_fixed_annotated.txt', 'r') as f:
+    with open(filename, 'r') as f:
         annotation['width'] = int(f.readline().split(',')[1].strip())
         annotation['height'] = int(f.readline().split(',')[1].strip())
         annotation['centerX'] = float(f.readline().split(',')[1].strip())
