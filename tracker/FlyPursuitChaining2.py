@@ -104,7 +104,6 @@ class Prc():
         # process
         while True:
             frame, res = yield
-            print(res.frame_count)
             res.frame_count = int(res.frame_count+1)
             f0 = res.background - frame[:, :, 0]
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
