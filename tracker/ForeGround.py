@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import scipy.ndimage as sci
+import skimage.segmentation
 
 
 def circular_kernel(kernel_size=3):
@@ -55,7 +56,7 @@ def clean_labels(labeled_frame, new_labels=None, force_cont=False):
 
 
 def getpoints(frame):
-    """get x,y indices of foreground pixels"""
+    """Get x,y indices of foreground pixels."""
     # points = np.nonzero(frame)  # returns 2 lists - one for row, one for columns indices
     # return np.vstack(points).astype(np.float32).T  # convert to Nx2 array
     points = np.unravel_index(np.flatnonzero(frame), frame.shape)
@@ -71,7 +72,7 @@ def samplepoints(frame, nval=5000):
 
 
 def segment_connected_components(frame, minimal_size=None):
-    """get properties of all connected components"""
+    """Get properties of all connected components."""
     labeled_frame, nlbl = sci.label(frame)
 
     if minimal_size is not None:
@@ -103,10 +104,13 @@ def segment_connected_components(frame, minimal_size=None):
 
 
 def segment_center_of_mass(frame):
-    """ get center of mass of all points - usually very robust for single-fly tracking since it ignores small specks"""
+    """Get center of mass (median position) of all points.
+
+    Usually very robust for single-fly tracking since it ignores small specks.
+    """
     points = getpoints(frame)
     size = points.shape[0]
-    if size==0:  # if frame is empty (no super-threshold points)
+    if size == 0:  # if frame is empty (no super-threshold points)
         centers = None
         labels = None
         std = None
@@ -123,6 +127,33 @@ def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100
     # points = samplepoints(frame)
     cluster_compactness, labels, centers = cv2.kmeans(points, num_clusters, None, criteria=term_crit, attempts=100, flags=init_method)
     return centers, labels, points
+
+
+def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilation=3, marker_dilation=15):
+    """Segment by applying watershed transform."""
+    # markers provide "seeds" for the watershed transform - same shape as frame with pixels of different integer values for different segments
+    markers = np.zeros(frame.shape, dtype=np.uint8)
+    for cnt, marker_position in enumerate(marker_positions):
+        markers[int(marker_position[0]), int(marker_position[1])] = int(cnt + 1)  # +1 since 0=background
+    # make segmentation more robust - dilation factor determines tolerance - bigger values allow catching the fly even if it moves quite a bit
+    markers = dilate(markers, marker_dilation)
+    bg_mask = frame < frame_threshold  # everything outside of mask is ignored - need to test robustness of threshold
+    labeled_frame = skimage.segmentation.watershed(dilate(frame, frame_dilation), markers, mask=bg_mask)
+
+    # process segmentation
+    labels = labeled_frame[labeled_frame > 0]  # get all foreground labels
+    points = getpoints(labeled_frame > 0)  # get position of all foreground pixels
+    number_of_segments = np.unique(labeled_frame)[1:].shape[0]+1 # +1 since 0 is background
+    centers = np.zeros((number_of_segments, 2))
+    std = np.zeros((number_of_segments, 2))
+    size = np.zeros((number_of_segments, 1))
+    # get stats of segments
+    for ii in range(number_of_segments):  # [1:] since first unique values=0=background
+        centers[ii, :] = np.median(points[labels == ii, :], axis=0)
+        std[ii, :] = np.std(points[labels == ii, :], axis=0)
+        size[ii, 0] = np.sum(labels == ii)
+
+    return centers, labels, points, std, size, labeled_frame
 
 
 def split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
