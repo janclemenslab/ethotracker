@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, annotationfilename=None):
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
     # TODO:
     #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
     #  provide these as args, if no chamber mask and box use full frame
@@ -39,11 +39,11 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
 
     # LED mask
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.led_mask = cv2.circle(res.led_mask, (int(a['rectCenterX']), int(a['rectCenterY'])), int(a['rectRadius']), color=[1, 1, 1], thickness=-1)
+    res.led_mask = cv2.circle(res.led_mask, (int(a['rectCenterY']), int(a['rectCenterX'])), int(a['rectRadius']), color=[1, 1, 1], thickness=-1)
     res.led_coords = fg.get_bounding_box(res.led_mask)  # get bounding boxes of remaining chambers
     # chambers mask
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.chambers = cv2.circle(res.chambers, (int(a['centerX']), int(a['centerY'])), int(a['radius']), color=[1, 1, 1], thickness=-1)
+    res.chambers = cv2.circle(res.chambers, (int(a['centerY']), int(a['centerX'])), int(a['radius']+10), color=[1, 1, 1], thickness=-1)
 
     # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
@@ -104,7 +104,9 @@ class Prc():
         # process
         while True:
             frame, res = yield
+            print(res.frame_count)
             res.frame_count = int(res.frame_count+1)
+            f0 = res.background - frame[:, :, 0]
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
             foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # get rid of specks
@@ -115,6 +117,17 @@ class Prc():
                         centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         frame_error[ii-1] = 1
                     else:  # for subsequent frames use connected components and split those with multiple flies
+                        # f = f0[chamber_slices[ii]]
+                        # # f = f * fg.dilate(foreground_cropped,5)
+                        # # f[f==0] = 255
+                        # marker_positions = np.vstack(([0, 0], old_centers[ii-1, :, :]))  # prepend background marker
+                        # this_centers, labels, points, std, size, labeled_frame = fg.segment_watershed(f, marker_positions)
+                        # centers[ii-1, :, :] = this_centers[1:, :]  # keep only non-background segments
+                        # labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
+                        # labels = labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
+                        # points = points[labels[:, 0] >= 0, :]
+                        # labels = labels[labels[:, 0] >= 0, :]
+                        # print(np.unique(labels))
                         # if any flies outside of any component - grow blobs and repeat conn comps
                         cnt = 0  # n-repeat of conn comp
                         flycnt = [res.nflies]  # init with all flies outside of conn comps
@@ -123,12 +136,13 @@ class Prc():
                         this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
                         labeled_frame_id = labeled_frame.copy().astype(np.uint8)
+                        labeled_frame_id = fg.dilate(labeled_frame_id, kernel_size=10)
                         while flycnt[0] > 0 and cnt < max_repeats:  # flies outside of conn comps
                             if cnt is not 0:  # do not display on first pass
                                 # print(f"{flycnt[0]} outside of the conn comps - growing blobs")
                                 if flycnt[0] == res.nflies:
                                     print('   something is wrong')
-                                labeled_frame_id = fg.dilate(labeled_frame_id, kernel_size=3)
+                                labeled_frame_id = fg.dilate(labeled_frame_id, kernel_size=5)
                                 frame_error[ii-1] = 2
                             # get conn comp each fly is in using previous position
                             fly_conncomps = labeled_frame_id[np.uintp(old_centers[ii-1, :, 0]), np.uintp(old_centers[ii-1, :, 1])]
@@ -141,7 +155,74 @@ class Prc():
                         if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
                             flybins = np.uintp(flybins[1:] - 0.5)
                             this_labels = np.reshape(this_labels, (this_labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
-                            centers[ii-1, :, :], labels, points, = fg.split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, res.nflies, do_erode=False)
+
+                            # old version:
+                            # centers[ii-1, :, :], labels, points, = fg.split_connected_components_cluster(flybins, flycnt, this_labels, labeled_frame, points, res.nflies, do_erode=False)
+
+                            # new version:
+                            f = 255-f0[chamber_slices[ii]]
+                            marker_positions = np.vstack(([0, 0], old_centers[ii-1, :, :]))  # prepend background marker
+                            labels = this_labels.copy()  # copy for new labels
+                            # split conn compts with multiple flies using clustering
+                            for con in np.uintp(flybins[flycnt > 1]):
+                                # cluster points for current conn comp
+                                # con_frame = labeled_frame == con
+                                con_frame = f.copy()
+                                con_frame[fg.erode(np.uint8(labeled_frame != con), 10) == 1] = 100
+                                # get bounding box around current conn comp for cropping frame
+                                bb = fg.get_bounding_box(fg.dilate(np.uint8(con_frame != 100), 15) == 1)
+                                bb = bb[0][:, ::-1]  # ::-1 order x,y
+                                offset = np.min(bb, axis = 0)  # get upper left corner of box
+                                con_frame = f.copy()
+                                con_frame = fg.crop(con_frame, np.ravel(bb))
+                                con_frame_mask = fg.erode(np.uint8(fg.crop(labeled_frame, np.ravel(bb)) != con), 10) == 1
+
+                                ff = (-con_frame + 255) > res.threshold*255  # threshold current patch
+                                ff = fg.erode(np.uint8(ff), 7)
+                                ff[con_frame_mask] = 0  # mask out adjecent flies/patches
+                                con_centers, con_labels, con_points = fg.segment_cluster(ff, flycnt[con])
+                                if flycnt[con] > 2:  # only use additional watershed step when >2 flies in conn comp
+                                    con_frame[con_frame_mask] = 100
+                                    marker_positions = np.vstack(([0, 0], con_centers))
+                                    con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_dilation=7)
+                                    # plt.subplot(121)
+                                    # plt.cla()
+                                    # plt.imshow(con_frame)
+                                    # plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
+                                    # plt.subplot(122)
+                                    # plt.imshow(ll)
+                                    # plt.show()
+                                    # plt.pause(0.00001)
+                                    con_labels = np.reshape(con_labels, (con_labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
+                                    con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
+                                    con_points = con_points[con_labels[:, 0] >= 0, :]
+                                    con_labels = con_labels[con_labels[:, 0] >= 0, :]
+                                con_points = con_points + offset[::-1]
+                                # import ipdb; ipdb.set_trace()
+                                # input('hit')
+
+                                # delete old labels and points - if we erode we will have fewer points
+                                points = points[labels[:, 0] != con,:]
+                                labels = labels[labels[:, 0] != con]
+                                # append new labels and points
+                                labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
+                                points = np.append(points, con_points, axis=0)
+
+                            # make labels consecutive numbers again
+                            new_labels = np.zeros_like(labels)
+                            for cnt, label in enumerate(np.unique(labels)):
+                                new_labels[labels == label] = cnt
+                            labels = new_labels.copy()
+                            # if np.unique(labels).shape[0]>nflies:
+                            # import ipdb; ipdb.set_trace()
+                            # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
+                            # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
+                            # calculate center values from new labels
+                            this_centers = np.zeros((res.nflies, 2))
+                            for label in np.unique(labels):
+                                this_centers[label, :] = np.median(points[labels[:, 0] == label, :], axis=0)
+
+                            centers[ii-1, :, :] = this_centers
                         else:  # if still flies w/o conn compp fall back to segment_cluster
                             print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                             centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
@@ -149,11 +230,12 @@ class Prc():
 
                     if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
                         for label in np.unique(labels):
-                            lines[ii-1, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
+                            lines[ii-1, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
             if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
                 for ii in uni_chambers:
                     if ii > 0:
+                        # import ipdb; ipdb.set_trace()
                         new_labels, centers[ii-1, :, :] = tk.match(old_centers[ii-1, :, :], centers[ii-1, :, :])
                         lines[ii-1, :, :, :] = lines[ii-1, new_labels, :, :]  # also re-order lines
             old_centers = np.copy(centers)  # remember
@@ -168,7 +250,7 @@ class Prc():
 
             res.centers[res.frame_count, :, :, :] = centers
             res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
-            res.frame_error[res.frame_count, :, :] = frame_error
+            # res.frame_error[res.frame_count, :, :] = frame_error
             res.area[res.frame_count, :] = 0
             yield res, foreground
 
@@ -239,8 +321,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         for ii in uni_chambers:
                             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
                                                         res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
-                        frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
-                        # frame_with_tracks = cv2.cvtColor(np.uint8(frame[:,:,0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
+                        # frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        frame_with_tracks = cv2.cvtColor(np.uint8(frame[:,:,0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
                                                      centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
                                                      lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
