@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, annotationfilename=None):
     # TODO:
     #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
     #  provide these as args, if no chamber mask and box use full frame
