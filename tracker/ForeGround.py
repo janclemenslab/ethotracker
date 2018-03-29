@@ -156,13 +156,50 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     return centers, labels, points, std, size, labeled_frame
 
 
-def split_connected_components(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
+def split_connected_components_cluster(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
     """Split conn compts containing more than one fly."""
     labels = this_labels.copy()  # copy for new labels
     # split conn compts with multiple flies using clustering
     for con in np.uintp(flybins[flycnt > 1]):
         # cluster points for current conn comp
 
+        con_frame = labeled_frame == con
+        # erode to increase separation between flies in a blob
+        if do_erode:
+            con_frame = erode(con_frame.astype(np.uint8), kernel_size=5)
+        con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
+        if do_erode:  # with erosion:
+            # delete old labels and points - if we erode we will have fewer points
+            points = points[labels[:, 0] != con,:]
+            labels = labels[labels[:, 0] != con]
+            # append new labels and points
+            labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
+            points = np.append(points, con_points, axis=0)
+        else:  # w/o erosion:
+            labels[this_labels == con] = np.max(labels) + 10 + con_labels[:, 0]
+
+    # make labels consecutive numbers again
+    new_labels = np.zeros_like(labels)
+    for cnt, label in enumerate(np.unique(labels)):
+        new_labels[labels == label] = cnt
+    labels = new_labels.copy()
+    # if np.unique(labels).shape[0]>nflies:
+    # import ipdb; ipdb.set_trace()
+    # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
+    # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
+    # calculate center values from new labels
+    centers = np.zeros((nflies, 2))
+    for label in np.unique(labels):
+        centers[label, :] = np.median(points[labels[:, 0] == label, :], axis=0)
+    return centers, labels, points
+
+
+def split_connected_components_watershed(flybins, flycnt, this_labels, labeled_frame, points, nflies, marker_positions, frame, do_erode=False):
+    """Split conn compts containing more than one fly."""
+    labels = this_labels.copy()  # copy for new labels
+    # split conn compts with multiple flies using clustering
+    for con in np.uintp(flybins[flycnt > 1]):
+        # cluster points for current conn comp
         con_frame = labeled_frame == con
         # erode to increase separation between flies in a blob
         if do_erode:
