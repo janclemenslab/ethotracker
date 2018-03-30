@@ -35,7 +35,8 @@ cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=
 
 # log file output - "-oo" will overwrite existing log file, "-o" would append to existing file
 if props["params"].get("logfile"):
-    logfilename = f"{jobname}-{props["params"].get("logfile")}"
+    namedir, namefile = os.path.split(props['params'].get('logfile'))
+    logfilename = f"{namedir}/{jobname}-{namefile}"
 else:
     logfilename = "{logdir}/{jobname}.txt".format(logdir=LOGDIR, jobname=jobname)
 cmdline += f"-oo {logfilename} "
