@@ -18,7 +18,7 @@ directories = [directory for directory, file in zip(directories, files) if not f
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-fixfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}_fixed.avi", zip, directory=directories, file=files)
+fixfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.avi.bak", zip, directory=directories, file=files)
 bgdfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.png", zip, directory=directories, file=files)
 trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
@@ -26,12 +26,15 @@ spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, dir
 rule all:
     input: bgdfiles, trkfiles, spdfiles
 
+rule fix:
+    input: fixfiles
+
 rule fix_videos:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}_fixed.avi",
+    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi.bak",
     params:
         logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_fix.log",
-    shell: "ffmpeg -i {input} -c copy {output}"
+    shell: "mv {input} {input}.bak; ffmpeg -i {input}.bak -c copy {input}"
 
 rule estimate_background:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
