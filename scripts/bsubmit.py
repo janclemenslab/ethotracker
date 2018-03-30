@@ -2,6 +2,7 @@
 import os
 import sys
 import re
+import datetime
 from snakemake.utils import read_job_properties
 
 # call: bsubmit {dependencies} DATADIR LOGDIR jobscript
@@ -32,11 +33,12 @@ else:
 cmdline = 'bsub -J {jobname} -r -E "ls {datadir}" -W {runtime} '.format(jobname=jobname, datadir=DATADIR, runtime=runtime)
 # cmdline = 'bsub -J {jobname} -W {runtime}'.format(jobname=jobname, runtime="08:00")
 
-# log file output
+# log file output - "-oo" will overwrite existing log file, "-o" would append to existing file
 if props["params"].get("logfile"):
-    cmdline += "-oo {logfile} ".format(logfile=props["params"].get("logfile"))
+    logfilename = f"{jobname}-{props["params"].get("logfile")}"
 else:
-    cmdline += "-oo {logdir}/{jobname}.txt ".format(logdir=LOGDIR, jobname=jobname)
+    logfilename = "{logdir}/{jobname}.txt".format(logdir=LOGDIR, jobname=jobname)
+cmdline += f"-oo {logfilename} "
 
 # # pass memory resource request to LSF
 # mem = props.get('resources', {}).get('mem')
