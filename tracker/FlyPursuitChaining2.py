@@ -197,15 +197,22 @@ class Prc():
                                     con_points = con_points[con_labels[:, 0] >= 0, :]
                                     con_labels = con_labels[con_labels[:, 0] >= 0, :]
                                 con_points = con_points + offset[::-1]
-                                # import ipdb; ipdb.set_trace()
                                 # input('hit')
-
-                                # delete old labels and points - if we erode we will have fewer points
-                                points = points[labels[:, 0] != con,:]
-                                labels = labels[labels[:, 0] != con]
-                                # append new labels and points
-                                labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
-                                points = np.append(points, con_points, axis=0)
+                                try:
+                                    # delete old labels and points - if we erode we will have fewer points
+                                    points = points[labels[:, 0] != con, :]
+                                    labels = labels[labels[:, 0] != con]
+                                    # append new labels and points
+                                    # if all flies in a single component then labels/points will be empty we use default since max op will error
+                                    if labels.shape[0] == 0:
+                                        new_con_label = 100 + con_labels
+                                    else:
+                                        new_con_label = np.max(labels) + 10 + con_labels
+                                    labels = np.append(labels, new_con_label, axis=0)
+                                    points = np.append(points, con_points, axis=0)
+                                except Exception as e:
+                                    print(e)
+                                    import ipdb; ipdb.set_trace()
 
                             # make labels consecutive numbers again
                             new_labels = np.zeros_like(labels)
@@ -213,7 +220,6 @@ class Prc():
                                 new_labels[labels == label] = cnt
                             labels = new_labels.copy()
                             # if np.unique(labels).shape[0]>nflies:
-                            # import ipdb; ipdb.set_trace()
                             # plt.imshow(labeled_frame);plt.plot(old_centers[ii-1,:,1], old_centers[ii-1,:,0], '.r')
                             # plt.scatter(points[:,1], points[:,0], c=labels[:,0])
                             # calculate center values from new labels
@@ -234,7 +240,6 @@ class Prc():
             if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
                 for ii in uni_chambers:
                     if ii > 0:
-                        # import ipdb; ipdb.set_trace()
                         new_labels, centers[ii-1, :, :] = tk.match(old_centers[ii-1, :, :], centers[ii-1, :, :])
                         lines[ii-1, :, :, :] = lines[ii-1, new_labels, :, :]  # also re-order lines
             old_centers = np.copy(centers)  # remember
