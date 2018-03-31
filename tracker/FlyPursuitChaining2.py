@@ -198,21 +198,18 @@ class Prc():
                                     con_labels = con_labels[con_labels[:, 0] >= 0, :]
                                 con_points = con_points + offset[::-1]
                                 # input('hit')
-                                try:
-                                    # delete old labels and points - if we erode we will have fewer points
-                                    points = points[labels[:, 0] != con, :]
-                                    labels = labels[labels[:, 0] != con]
-                                    # append new labels and points
-                                    # if all flies in a single component then labels/points will be empty we use default since max op will error
-                                    if labels.shape[0] == 0:
-                                        new_con_label = 100 + con_labels
-                                    else:
-                                        new_con_label = np.max(labels) + 10 + con_labels
-                                    labels = np.append(labels, new_con_label, axis=0)
-                                    points = np.append(points, con_points, axis=0)
-                                except Exception as e:
-                                    print(e)
-                                    import ipdb; ipdb.set_trace()
+                                # delete old labels and points - if we erode we will have fewer points
+                                # print((points.shape, labels.shape))
+                                points = points[labels[:, 0] != con, :]
+                                labels = labels[labels[:, 0] != con]
+                                # append new labels and points
+                                # if all flies in a single component then labels/points will be empty we use default since max op will error
+                                if labels.shape[0] == 0:
+                                    new_con_labels = 100 + con_labels
+                                else:
+                                    new_con_labels = np.max(labels) + 10 + con_labels
+                                labels = np.append(labels, new_con_labels, axis=0)
+                                points = np.append(points, con_points, axis=0)
 
                             # make labels consecutive numbers again
                             new_labels = np.zeros_like(labels)
