@@ -116,22 +116,10 @@ class Prc():
                         centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         frame_error[ii-1] = 1
                     else:  # for subsequent frames use connected components and split those with multiple flies
-                        # f = f0[chamber_slices[ii]]
-                        # # f = f * fg.dilate(foreground_cropped,5)
-                        # # f[f==0] = 255
-                        # marker_positions = np.vstack(([0, 0], old_centers[ii-1, :, :]))  # prepend background marker
-                        # this_centers, labels, points, std, size, labeled_frame = fg.segment_watershed(f, marker_positions)
-                        # centers[ii-1, :, :] = this_centers[1:, :]  # keep only non-background segments
-                        # labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
-                        # labels = labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
-                        # points = points[labels[:, 0] >= 0, :]
-                        # labels = labels[labels[:, 0] >= 0, :]
-                        # print(np.unique(labels))
                         # if any flies outside of any component - grow blobs and repeat conn comps
                         cnt = 0  # n-repeat of conn comp
                         flycnt = [res.nflies]  # init with all flies outside of conn comps
                         max_repeats = 5  # only do this twice - first pass uses raw foreground, second pass uses dilated foreground
-                        # foreground_cropped_disposable = foreground_cropped.copy()  # use this for dilation so we assign conn comps to fly positions from previous frame
                         this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                                 foreground_cropped, minimal_size=5)
                         labeled_frame_id = labeled_frame.copy().astype(np.uint8)
@@ -257,6 +245,7 @@ class Prc():
 
 
 def run(file_name, override=False, init_only=False, display=None, save_video=False, nflies=1, threshold=0.4, save_interval=1000, start_frame=None, led_coords=[10, 550, 100, -1]):
+    """Track movie."""
     try:
         printf = lambda string: print(os.path.basename(file_name) + ": " + string)
         printf('processing ' + file_name)
@@ -271,7 +260,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                 else:
                     res.frame_count = start_frame
                 printf('resuming from {0}'.format(start_frame))
-
+            except KeyboardInterrupt:
+                raise
             except Exception as e:  # if fails start from scratch
                 res_loaded = False
                 pass
@@ -284,7 +274,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             printf("done initializing")
             pass
 
-        if len(led_coords)!=4:
+        if len(led_coords) != 4:
             ret, frame = vr.read()
             led_coords = fg.detect_led(frame)
             vr.reset()
@@ -316,17 +306,17 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                     res.led[res.frame_count] = np.mean(fg.crop(frame[:, :, 0], led_coords))
                     # get annotated frame if necessary
                     if save_video or (display is not None and res.frame_count % display == 0):
-                        chamberID = 0 # fix to work with multiple chambers
+                        chamberID = 0  # fix to work with multiple chambers
                         uni_chambers = np.unique(res.chambers).astype(np.int)
                         chamber_slices = [None] * int(res.nchambers + 1)
                         for ii in uni_chambers:
                             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
                                                         res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
                         # frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
-                        frame_with_tracks = cv2.cvtColor(np.uint8(frame[:,:,0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
+                        frame_with_tracks = cv2.cvtColor(np.uint8(frame[:, :, 0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
-                                                     centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
-                                                     lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
+                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
+                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
 
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
@@ -370,7 +360,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         ee = e
         print(ee)
         return 0
-    finally:
+    finally:  # clean up - will be called before return statement
         if display is not None:  # close any windows
             cv2.destroyAllWindows()
         if save_video:
