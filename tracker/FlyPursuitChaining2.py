@@ -346,6 +346,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         res.status = "progress"
                         res.save(file_name[0:-4] + '.h5')
                         printf("    saving intermediate results")
+                except KeyboardInterrupt:
+                    raise
                 except Exception as e:  # catch errors during frame processing
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                     traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
@@ -358,23 +360,21 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         res.status = "done"
         res.save(file_name[0:-4] + '.h5')
         printf("             done.")
-        if display is not None:  # close any windows
-            cv2.destroyAllWindows()
-        if save_video:
-            vw.release()
         return 1
-
+    except KeyboardInterrupt:
+        raise
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
         printf(repr(traceback.extract_tb(exc_traceback)))
         ee = e
         print(ee)
+        return 0
+    finally:
         if display is not None:  # close any windows
             cv2.destroyAllWindows()
         if save_video:
             vw.release()
-        return 0
 
 
 if __name__ == "__main__":
