@@ -100,6 +100,7 @@ def segment_connected_components(frame, minimal_size=None):
                                      out_dtype=np.uint, default=0, pass_positions=False)
     std = sci.labeled_comprehension(frame, labeled_frame, range(1, nlbl + 1), np.std,
                                     out_dtype=np.uint, default=0, pass_positions=False)
+    labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
     return centers, labels, points, std, size, labeled_frame
 
 
@@ -153,7 +154,29 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
         std[ii, :] = np.std(points[labels == ii, :], axis=0)
         size[ii, 0] = np.sum(labels == ii)
 
+    labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
     return centers, labels, points, std, size, labeled_frame
+
+def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5):
+    # labeled frame for assigning flies to conn comps - dilate if missing flies - not used splitting multifly comps
+    labeled_frame_id = labeled_frame.copy().astype(np.uint8)  # dilate needs uint8
+    labeled_frame_id = dilate(labeled_frame_id, kernel_size=initial_dilation_factor)  # grow by 10 to connect nearby comps
+    nflies = positions.shape[0]
+    # if any flies outside of any component - grow blobs and repeat conn comps
+    cnt = 0  # n-repeat of conn comp
+    flycnt = [nflies]  # init with all flies outside of conn comps
+    while flycnt[0] > 0 and cnt < max_repeats:  # flies outside of conn comps
+        if cnt is not 0:  # do not display on first pass
+            # print(f"{flycnt[0]} outside of the conn comps - growing blobs")
+            if flycnt[0] == nflies:
+                print('   something is wrong')
+            labeled_frame_id = dilate(labeled_frame_id, kernel_size=repeat_dilation_factor)
+        # get conn comp each fly is in using previous position
+        fly_conncomps = labeled_frame_id[np.uintp(positions[:, 0]), np.uintp(positions[:, 1])]
+        # count number of flies per conn comp
+        flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5 + np.arange(np.max(labeled_frame+2)))
+        cnt += 1
+    return flycnt, flybins, cnt
 
 
 def split_connected_components_cluster(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
