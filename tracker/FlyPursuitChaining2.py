@@ -138,9 +138,8 @@ class Prc():
                             # 1. get bounding box around current comp for cropping frame
                             con_frame = this_foreground0.copy()
                             con_frame[fg.erode(np.uint8(labeled_frame != con), 10) == 1] = 100  # mark background - erode to add padding around flies
-
                             con_bb = fg.get_bounding_box(fg.dilate(np.uint8(con_frame != 100), 15) == 1)  # dilate to get enough margin around conn comp
-                            con_bb = con_bb[0][:, ::-1]  # ::-1 order x,y
+                            con_bb = con_bb[1][:, ::-1]  # [0] is bg, ::-1 order x,y
                             con_offset = np.min(con_bb, axis=0)  # get upper left corner of box - needed to transform positions back into global chamber coords
 
                             # 2. crop around current comp
@@ -187,16 +186,9 @@ class Prc():
                             points = np.append(points, con_points, axis=0)
 
                         # make labels consecutive numbers again so we can use them as indices
-                        new_labels = np.zeros_like(labels)
-                        for cnt, label in enumerate(np.unique(labels)):
-                            new_labels[labels == label] = cnt
-                        labels = new_labels.copy()
-
+                        labels, _, _ = fg.clean_labels(labels)
                         # calculate positions for all flies
-                        this_centers = np.zeros((res.nflies, 2))
-                        for label in np.unique(labels):
-                            this_centers[label, :] = np.median(points[labels[:, 0] == label, :], axis=0)
-                        centers[chb, :, :] = this_centers
+                        centers[chb, :, :] = [np.median(points[labels[:, 0] == label, :], axis=0) for label in np.unique(labels)]
                     else:  # if still flies w/o conn compp fall back to segment_cluster
                         print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
@@ -289,7 +281,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                     # get annotated frame if necessary
                     if save_video or (display is not None and res.frame_count % display == 0):
                         chamberID = 0  # fix to work with multiple chambers
-                        frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
                         frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
                                                         centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
