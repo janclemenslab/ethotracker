@@ -47,6 +47,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
 
     # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
+    # FIXME: no need to pre-pend background anymore
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
     # init Results structure
@@ -96,14 +97,16 @@ class Prc():
 
         area = np.zeros((1, res.nchambers, res.nflies))
 
+        # get list of chamber numbers and remove background "chamber"
         uni_chambers = np.unique(res.chambers).astype(np.int)
-        uni_chambers = uni_chambers[uni_chambers>0]-1  # get rid of background (0) and -1 makes sure chamber1 ==unichamber 0
-        chamber_slices = [None] * int(res.nchambers)
+        uni_chambers = uni_chambers[uni_chambers>0] - 1  # get rid of background (0) and -1 makes sure chamber1 ==unichamber 0
 
+        # get slices for cropping foreground by chambers
+        chamber_slices = [None] * int(res.nchambers)
         for ii in uni_chambers:
-            # chambers_bounding_box[ii+1...] since box[0] is full frame/background
+            # FIXME: chambers_bounding_box[ii+1...] since box[0] is full frame/background - maybe fix that by removing background? will probably break things in playback tracker
             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii+1, 0, 0]:res.chambers_bounding_box[ii+1, 1, 0],
-                                  res.chambers_bounding_box[ii+1, 0, 1]:res.chambers_bounding_box[ii+1, 1, 1]])
+                                        res.chambers_bounding_box[ii+1, 0, 1]:res.chambers_bounding_box[ii+1, 1, 1]])
         # process
         while True:
             frame, res = yield
@@ -113,7 +116,7 @@ class Prc():
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
             foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # get rid of specks
             for chb in uni_chambers:
-                foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
+                foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
                 if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                     centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                     frame_error[chb] = 1
@@ -121,17 +124,14 @@ class Prc():
                     this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                             foreground_cropped, minimal_size=5)
                     # assigning flies to conn comps
-                    flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
-
+                    # FIXME: make flybins proper indices: np.uintp(flybins + 0.5)
+                    fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                     # alternatively, we could simply "delete" empty conn comps
                     if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
-                        flybins = np.uintp(flybins[1:] - 0.5)  # convert bin values to indices for conn comp
-                        # old version:
-                        # centers[chb, :, :], labels, points, = fg.split_connected_components_cluster(flybins, flycnt, this_labels, labeled_frame, points, res.nflies, do_erode=False)
+                        flybins = flybins[1:] - 1  # remove bg bin and shift so it starts at 0 for indexing
 
-                        # new version:
-                        this_foreground0 = 255-foreground0[chamber_slices[chb]]
+                        this_foreground0 = 255-foreground0[chamber_slices[chb]]  # non-thresholded foreground for watershed
                         labels = this_labels.copy()  # copy for new labels
                         # split conn comps with multiple flies using clustering
                         for con in np.uintp(flybins[flycnt > 1]):
@@ -139,24 +139,23 @@ class Prc():
                             con_frame = this_foreground0.copy()
                             con_frame[fg.erode(np.uint8(labeled_frame != con), 10) == 1] = 100  # mark background - erode to add padding around flies
 
-                            bb = fg.get_bounding_box(fg.dilate(np.uint8(con_frame != 100), 15) == 1)  # dilate to get enough margin around conn comp
-                            bb = bb[0][:, ::-1]  # ::-1 order x,y
-                            offset = np.min(bb, axis=0)  # get upper left corner of box - needed to transform positions back into global chamber coords
+                            con_bb = fg.get_bounding_box(fg.dilate(np.uint8(con_frame != 100), 15) == 1)  # dilate to get enough margin around conn comp
+                            con_bb = con_bb[0][:, ::-1]  # ::-1 order x,y
+                            con_offset = np.min(con_bb, axis=0)  # get upper left corner of box - needed to transform positions back into global chamber coords
 
                             # 2. crop around current comp
                             con_frame = this_foreground0.copy()
-                            con_frame = fg.crop(con_frame, np.ravel(bb))
+                            con_frame = fg.crop(con_frame, np.ravel(con_bb))
                             # mask indicating other comps -  we want to ignore those in the current comp
-                            con_frame_mask = fg.erode(np.uint8(fg.crop(labeled_frame, np.ravel(bb)) != con), 10) == 1
+                            con_frame_mask = fg.erode(np.uint8(fg.crop(labeled_frame, np.ravel(con_bb)) != con), 10) == 1
 
                             # 3. segment using clustering
                             #  - if 2 flies in comp we stop here,
                             #  - if >2 flies then use cluster results as seeds for watershed - usually refines fly positions if flies in a bunch
                             con_frame_thres = (-con_frame + 255) > res.threshold*255  # threshold current patch
-                            con_frame_thres = fg.erode(con_frame_thres.astype(np.uint8), 7)  # to amplify gaps/sepration between flies
+                            con_frame_thres = fg.erode(con_frame_thres.astype(np.uint8), 7)  # amplify gaps/sepration between flies
                             con_frame_thres[con_frame_mask] = 0  # mask out adjecent flies/patches
                             con_centers, con_labels, con_points = fg.segment_cluster(con_frame_thres, num_clusters=flycnt[con])
-
                             # 4. if >2 flies in conn comp we watershed
                             if flycnt[con] > 2:  # only use additional watershed step when >2 flies in conn comp
                                 con_frame[con_frame_mask] = 0  # mask out adjecent flies/patches
@@ -174,9 +173,9 @@ class Prc():
                                 # only keep foreground points/labels
                                 con_points = con_points[con_labels[:, 0] >= 0, :]
                                 con_labels = con_labels[con_labels[:, 0] >= 0, :]
-                            con_points = con_points + offset[::-1]  # current point coordinates are in cropped frame - transform to chamber coords
+                            con_points = con_points + con_offset[::-1]  # current point coordinates are in cropped frame - transform to chamber coords
                             # input('hit')
-                            # delete old labels and points - if we erode we will have fewer points
+                            # delete old labels and points - if we erode/dilate con comp we will have fewer/more points
                             points = points[labels[:, 0] != con, :]
                             labels = labels[labels[:, 0] != con]
                             # append new labels and points
@@ -290,20 +289,13 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                     # get annotated frame if necessary
                     if save_video or (display is not None and res.frame_count % display == 0):
                         chamberID = 0  # fix to work with multiple chambers
-                        uni_chambers = np.unique(res.chambers).astype(np.int)
-                        chamber_slices = [None] * int(res.nchambers + 1)
-                        for ii in uni_chambers:
-                            chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
-                                                        res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
-                        # frame_with_tracks = cv2.cvtColor(np.uint8(foreground[chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)
-                        frame_with_tracks = cv2.cvtColor(np.uint8(frame[:, :, 0][chamber_slices[chamberID+1]]), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
+                        frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
                                                         centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
                                                         lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
-
                     # display annotated frame
                     if display is not None and res.frame_count % display == 0:
-                        # fg.show(np.float32(frame_with_tracks)/255.0, autoscale=False)
                         cv2.destroyAllWindows()
                         fg.show(frame_with_tracks, window_name=f"{res.frame_count}")
 
