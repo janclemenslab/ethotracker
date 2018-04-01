@@ -157,7 +157,15 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
     return centers, labels, points, std, size, labeled_frame
 
+
 def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5):
+    """Assign positions to conn comps.
+
+    fly_conncomps - conn comp fro each flycnt
+    flycnt - number of flies per conn comp
+    flybins - bins for cnt histogram
+    cnt - n-dilation rounds
+    """
     # labeled frame for assigning flies to conn comps - dilate if missing flies - not used splitting multifly comps
     labeled_frame_id = labeled_frame.copy().astype(np.uint8)  # dilate needs uint8
     labeled_frame_id = dilate(labeled_frame_id, kernel_size=initial_dilation_factor)  # grow by 10 to connect nearby comps
@@ -176,7 +184,8 @@ def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_di
         # count number of flies per conn comp
         flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5 + np.arange(np.max(labeled_frame+2)))
         cnt += 1
-    return flycnt, flybins, cnt
+    flybins = np.uintp(flybins + 0.5)  # make bins indices/labels
+    return fly_conncomps, flycnt, flybins, cnt
 
 
 def split_connected_components_cluster(flybins, flycnt, this_labels, labeled_frame, points, nflies, do_erode=False):
@@ -193,7 +202,7 @@ def split_connected_components_cluster(flybins, flycnt, this_labels, labeled_fra
         con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
         if do_erode:  # with erosion:
             # delete old labels and points - if we erode we will have fewer points
-            points = points[labels[:, 0] != con,:]
+            points = points[labels[:, 0] != con, :]
             labels = labels[labels[:, 0] != con]
             # append new labels and points
             labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
