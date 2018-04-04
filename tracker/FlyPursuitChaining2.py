@@ -50,6 +50,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     # FIXME: no need to pre-pend background anymore
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
+    res.centers_initial = a['flypositions']
     # init Results structure
     res.nflies = int(a['nFlies'])
     res.nchambers = int(np.max(res.chambers))
@@ -57,11 +58,9 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.number_of_frames = int(vr.number_of_frames)
-    if res.number_of_frames <= 0:
-        print('neg. number of frames detected - fallback to 3h recording')
-        res.number_of_frames = vr.frame_rate * 60 * 60 * 3  # fps*sec*min*hour
 
     res.centers = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
+    res.centers[res.frame_count, 0, :, :] = res.centers_initial
     res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
     res.lines = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
     res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
@@ -275,13 +274,12 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                 printf("frame returned False")
             else:
                 res, foreground = frame_processor.prc(frame, res)
-
                 res.led[res.frame_count] = np.mean(fg.crop(frame[:, :, 0], led_coords))
                 # get annotated frame if necessary
                 if save_video or (display is not None and res.frame_count % display == 0):
                     chamberID = 0  # fix to work with multiple chambers
-                    # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
-                    frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
+                    frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                    # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                     frame_with_tracks = fg.annotate(frame_with_tracks,
                                                     centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
                                                     lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
