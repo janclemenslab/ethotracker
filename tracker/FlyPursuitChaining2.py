@@ -118,6 +118,7 @@ class Prc():
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
                 if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                     centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                    print(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
                     this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
@@ -189,7 +190,7 @@ class Prc():
                         # calculate positions for all flies
                         centers[chb, :, :] = [np.median(points[labels[:, 0] == label, :], axis=0) for label in np.unique(labels)]
                     else:  # if still flies w/o conn compp fall back to segment_cluster
-                        print(f"{flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
+                        print(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         frame_error[chb] = 3
 
@@ -212,7 +213,7 @@ class Prc():
 
             res.centers[res.frame_count, :, :, :] = centers
             res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
-            # res.frame_error[res.frame_count, :, :] = frame_error
+            res.frame_error[res.frame_count, :, :] = frame_error
             res.area[res.frame_count, :] = 0
             yield res, foreground
 
@@ -315,7 +316,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         printf(repr(traceback.extract_tb(exc_traceback)))
         ee = e
         print(ee)
-        return 0
+        raise
     finally:  # clean up - will be called before return statement
         if display is not None:  # close any windows
             cv2.destroyAllWindows()
