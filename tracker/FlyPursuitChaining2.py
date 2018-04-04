@@ -35,24 +35,24 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     # load annotation filename
     annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
     with open(annotationfilename, 'r') as stream:
-        a = yaml.load(stream)
+        ann = yaml.load(stream)
 
     # LED mask
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.led_mask = cv2.circle(res.led_mask, (int(a['rectCenterY']), int(a['rectCenterX'])), int(a['rectRadius']), color=[1, 1, 1], thickness=-1)
+    res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
     res.led_coords = fg.get_bounding_box(res.led_mask)  # get bounding boxes of remaining chambers
     # chambers mask
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.chambers = cv2.circle(res.chambers, (int(a['centerY']), int(a['centerX'])), int(a['radius']+10), color=[1, 1, 1], thickness=-1)
+    res.chambers = cv2.circle(res.chambers, (int(ann['centerX']), int(ann['centerY'])), int(ann['radius']+10), color=[1, 1, 1], thickness=-1)
 
     # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
     # FIXME: no need to pre-pend background anymore
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
-    res.centers_initial = a['flypositions']
+    res.centers_initial = ann['flypositions']
     # init Results structure
-    res.nflies = int(a['nFlies'])
+    res.nflies = int(ann['nFlies'])
     res.nchambers = int(np.max(res.chambers))
     res.file_name = file_name
     res.start_frame = int(start_frame)
