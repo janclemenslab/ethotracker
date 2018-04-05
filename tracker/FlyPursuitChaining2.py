@@ -175,8 +175,11 @@ class Prc():
                             con_points = con_points + con_offset[::-1]  # current point coordinates are in cropped frame - transform to chamber coords
                             # input('hit')
                             # delete old labels and points - if we erode/dilate con comp we will have fewer/more points
-                            points = points[labels[:, 0] != con, :]
-                            labels = labels[labels[:, 0] != con]
+                            try:
+                                points = points[labels[:, 0] != con, :]
+                                labels = labels[labels[:, 0] != con]
+                            except:
+                                import ipdb; ipdb.set_trace()
                             # append new labels and points
                             if labels.shape[0] == 0:  # if all flies in a single component then labels/points will be empty we use default since max op will error
                                 new_con_labels = 100 + con_labels
@@ -274,33 +277,44 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             if not ret:
                 printf("frame returned False")
             else:
-                res, foreground = frame_processor.prc(frame, res)
-                res.led[res.frame_count] = np.mean(fg.crop(frame[:, :, 0], led_coords))
-                # get annotated frame if necessary
-                if save_video or (display is not None and res.frame_count % display == 0):
-                    chamberID = 0  # fix to work with multiple chambers
-                    frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
-                    # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
-                    frame_with_tracks = fg.annotate(frame_with_tracks,
-                                                    centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
-                                                    lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
-                # display annotated frame
-                if display is not None and res.frame_count % display == 0:
-                    cv2.destroyAllWindows()
-                    fg.show(frame_with_tracks, window_name=f"{res.frame_count}")
+                try:
+                    res, foreground = frame_processor.prc(frame, res)
+                    res.led[res.frame_count] = np.mean(fg.crop(frame[:, :, 0], led_coords))
+                    # get annotated frame if necessary
+                    if save_video or (display is not None and res.frame_count % display == 0):
+                        chamberID = 0  # fix to work with multiple chambers
+                        # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
+                        frame_with_tracks = fg.annotate(frame_with_tracks,
+                                                        centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
+                                                        lines=np.clip(np.uint(res.lines[res.frame_count, chamberID, 0:res.lines.shape[2], :, :]), 0, 10000))
+                    # display annotated frame
+                    if display is not None and res.frame_count % display == 0:
+                        cv2.destroyAllWindows()
+                        fg.show(frame_with_tracks, window_name=f"{res.frame_count}")
 
-                # save annotated frame to video
-                if save_video:
-                    vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
+                    # save annotated frame to video
+                    if save_video:
+                        vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
 
-                if res.frame_count % 1000 == 0:
-                    printf('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
-                    start = time.time()
+                    if res.frame_count % 1000 == 0:
+                        printf('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
+                        start = time.time()
 
-                if res.frame_count % save_interval == 0:
-                    res.status = "progress"
-                    res.save(file_name[0:-4] + '.h5')
-                    printf("    saving intermediate results")
+                    if res.frame_count % save_interval == 0:
+                        res.status = "progress"
+                        res.save(file_name[0:-4] + '.h5')
+                        printf("    saving intermediate results")
+                except KeyboardInterrupt:
+                    raise
+                except Exception as e:  # catch errors during frame processing
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                    traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+                    printf(repr(traceback.extract_tb(exc_traceback)))
+                    ee = e
+                    print(ee)
+                    print('---- re-raising error now ----')
+                    raise
 
         # save results and clean up
         printf("finished processing frames - saving results")
