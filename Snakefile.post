@@ -1,0 +1,22 @@
+# list all video files
+directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
+
+# remove hidden
+directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
+files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
+
+# generate inputs and outputs from listing
+trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
+spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
+
+rule all:
+   input: spdfiles
+
+rule postprocess:
+  input:
+      tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+  params:
+      snd_logs="/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
+      logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
+  output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
+  shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {params.snd_logs} {output}; cp {input.tracks} /scratch/clemens10/chaining/res/"

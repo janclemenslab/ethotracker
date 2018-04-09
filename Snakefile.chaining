@@ -12,10 +12,14 @@ trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, 
 spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
 
 rule all:
-    input: bgdfiles, trkfiles, spdfiles
+    input: trkfiles, spdfiles
 
 rule fix:
     input: fixfiles
+
+rule post:
+    input: spdfiles
+
 
 rule fix_videos:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
@@ -37,7 +41,7 @@ rule estimate_background:
 rule track:
     input:
         video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-        background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
+        # background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
     params:
         runtime="48:00",
         logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
