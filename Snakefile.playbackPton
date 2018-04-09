@@ -1,0 +1,32 @@
+# list all video files
+root_dir = '/scratch/clemens10/playback/'
+directories, files, = glob_wildcards(root_dir + 'dat/{directory}/{file}.avi')
+
+# remove hidden
+directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
+files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
+
+# generate inputs and outputs from listing
+#mp4files = expand(root_dir + "dat/{directory}/{file}.avi", zip, directory=directories, file=files)
+trkfiles = expand(root_dir + "dat/{directory}/{file}.h5", zip, directory=directories, file=files)
+spdfiles = expand(root_dir + "res/{directory}_spd.h5", zip, directory=directories, file=files)
+
+rule all:
+    input: trkfiles, spdfiles
+
+rule track:
+    input:
+        video=root_dir + "dat/{directory}/{videofile}.mp4",
+    output: root_dir + "dat/{directory}/{videofile}.h5"
+    params:
+        logfile=root_dir + "dat/{directory}/{videofile}_track.log",
+    shell: "python3 -m tracker.FlyPursuit_pb {input.video} -t 0.3 --led_coords 0" # force automatic detection of led corner
+
+rule postprocess:
+    input:
+        tracks = root_dir + "dat/{directory}/{directory}.h5",
+    params:
+        snd_log=root_dir + "dat/{directory}/{directory}_snd.log", # param so submits if misssing,
+        logfile=root_dir + "dat/{directory}/{directory}_post.log",
+    output: root_dir + "res/{directory}_spd.h5"
+    shell: "python3 ~/analysis/scripts/postprocessing.py {input.tracks} {params.snd_log} {output}"
