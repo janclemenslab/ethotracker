@@ -1,16 +1,17 @@
+import os
 # list all video files
-directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
+directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.h5')
 
-# remove hidden
-directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
-files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
+# remove recordings w/o tracks
+directories = [directory for directory in directories if os.path.exists(f'/scratch/clemens10/chaining/dat/{directory}/{directory}.h5')]
 
 # generate inputs and outputs from listing
-trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
-spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
+trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=directories)
+spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories)
 
 rule all:
    input: spdfiles
+
 
 rule postprocess:
   input:
