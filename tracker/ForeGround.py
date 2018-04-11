@@ -160,14 +160,10 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
         markers = dilate(markers, marker_dilation)
     bg_mask = frame < frame_threshold  # everything outside of mask is ignored - need to test robustness of threshold
     labeled_frame = skimage.segmentation.watershed(dilate(frame, frame_dilation), markers, mask=bg_mask, watershed_line=True)
-    # labeled_frame_shrink = erode((labeled_frame>0).astype(np.uint8),5)
-    # labeled_frame[labeled_frame_shrink==0] = 0
     # process segmentation
     if post_ws_mask is not None:
         labeled_frame[post_ws_mask == 0] = 0
 
-    # ll_mask = erode((labeled_frame>0).astype(np.uint8),4)
-    # labeled_frame[ll_mask==0]=0
     labels = labeled_frame[labeled_frame > 0]  # get all foreground labels
 
     points = getpoints(labeled_frame > 0)  # get position of all foreground pixels
