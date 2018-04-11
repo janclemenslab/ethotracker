@@ -130,19 +130,46 @@ def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100
     return centers, labels, points
 
 
-def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilation=3, marker_dilation=15):
+def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initial_means=None):
+    """Cluster by fitting GMM."""
+    points = samplepoints(frame)
+    em = cv2.ml.EM_create()
+    em.setClustersNumber(num_clusters)
+    em.setCovarianceMatrixType(em_cov)
+    if initial_means is None:
+        em.trainEM(points)
+    else:
+        em.trainE(points, means0=initial_means)
+    centers = em.getMeans()
+    _, probs = em.predict(points)
+    labels = np.argmax(probs, axis=1)
+    return centers, labels, points
+
+
+
+def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilation=3, marker_dilation=15, post_ws_mask=None):
     """Segment by applying watershed transform."""
     # markers provide "seeds" for the watershed transform - same shape as frame with pixels of different integer values for different segments
-    markers = np.zeros(frame.shape, dtype=np.uint8)
-    for cnt, marker_position in enumerate(marker_positions):
-        markers[int(marker_position[0]), int(marker_position[1])] = int(cnt + 1)  # +1 since 0=background
-    # make segmentation more robust - dilation factor determines tolerance - bigger values allow catching the fly even if it moves quite a bit
-    markers = dilate(markers, marker_dilation)
+    if np.all(marker_positions.shape==frame.shape):
+        markers = marker_positions
+    else:
+        markers = np.zeros(frame.shape, dtype=np.uint8)
+        for cnt, marker_position in enumerate(marker_positions):
+            markers[int(marker_position[0]), int(marker_position[1])] = int(cnt + 1)  # +1 since 0=background
+        # make segmentation more robust - dilation factor determines tolerance - bigger values allow catching the fly even if it moves quite a bit
+        markers = dilate(markers, marker_dilation)
     bg_mask = frame < frame_threshold  # everything outside of mask is ignored - need to test robustness of threshold
-    labeled_frame = skimage.segmentation.watershed(dilate(frame, frame_dilation), markers, mask=bg_mask)
-
+    labeled_frame = skimage.segmentation.watershed(dilate(frame, frame_dilation), markers, mask=bg_mask, watershed_line=True)
+    # labeled_frame_shrink = erode((labeled_frame>0).astype(np.uint8),5)
+    # labeled_frame[labeled_frame_shrink==0] = 0
     # process segmentation
+    if post_ws_mask is not None:
+        labeled_frame[post_ws_mask == 0] = 0
+
+    # ll_mask = erode((labeled_frame>0).astype(np.uint8),4)
+    # labeled_frame[ll_mask==0]=0
     labels = labeled_frame[labeled_frame > 0]  # get all foreground labels
+
     points = getpoints(labeled_frame > 0)  # get position of all foreground pixels
     number_of_segments = np.unique(labeled_frame)[1:].shape[0]+1 # +1 since 0 is background
     centers = np.zeros((number_of_segments, 2))
@@ -150,8 +177,10 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     size = np.zeros((number_of_segments, 1))
     # get stats of segments
     for ii in range(number_of_segments):  # [1:] since first unique values=0=background
-        centers[ii, :] = np.median(points[labels == ii, :], axis=0)
-        std[ii, :] = np.std(points[labels == ii, :], axis=0)
+        this_points = points[labels == ii, :].astype(np.uintp)
+        # centers[ii, :] = this_points[np.argmin(frame[this_points[:,0], this_points[:,1]]),:]
+        centers[ii, :] = np.median(this_points, axis=0)
+        std[ii, :] = np.std(this_points, axis=0)
         size[ii, 0] = np.sum(labels == ii)
 
     labels = np.reshape(labels, (labels.shape[0], 1))  # make (n,1), not (n,) for compatibility downstream
