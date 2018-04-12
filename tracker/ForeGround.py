@@ -9,16 +9,16 @@ def circular_kernel(kernel_size=3):
 
 
 def dilate(frame, kernel_size=3):
-    return cv2.dilate(frame, circular_kernel(kernel_size))
+    return cv2.dilate(frame.astype(np.uint8), circular_kernel(kernel_size))
 
 
 def erode(frame, kernel_size=3):
-    return cv2.erode(frame, circular_kernel(kernel_size))
+    return cv2.erode(frame.astype(np.uint8), circular_kernel(kernel_size))
 
 
 def close(frame, kernel_size=3):
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
-    return cv2.morphologyEx(frame, cv2.MORPH_CLOSE, kernel)
+    return cv2.morphologyEx(frame.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
 
 
 def threshold(frame, threshold):
@@ -192,7 +192,7 @@ def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_di
     cnt - n-dilation rounds
     """
     # labeled frame for assigning flies to conn comps - dilate if missing flies - not used splitting multifly comps
-    labeled_frame_id = labeled_frame.copy().astype(np.uint8)  # dilate needs uint8
+    labeled_frame_id = labeled_frame.copy()
     labeled_frame_id = dilate(labeled_frame_id, kernel_size=initial_dilation_factor)  # grow by 10 to connect nearby comps
     nflies = positions.shape[0]
     # if any flies outside of any component - grow blobs and repeat conn comps
@@ -223,7 +223,7 @@ def split_connected_components_cluster(flybins, flycnt, this_labels, labeled_fra
         con_frame = labeled_frame == con
         # erode to increase separation between flies in a blob
         if do_erode:
-            con_frame = erode(con_frame.astype(np.uint8), kernel_size=5)
+            con_frame = erode(con_frame, kernel_size=5)
         con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
         if do_erode:  # with erosion:
             # delete old labels and points - if we erode we will have fewer points
@@ -260,7 +260,7 @@ def split_connected_components_watershed(flybins, flycnt, this_labels, labeled_f
         con_frame = labeled_frame == con
         # erode to increase separation between flies in a blob
         if do_erode:
-            con_frame = erode(con_frame.astype(np.uint8), kernel_size=5)
+            con_frame = erode(con_frame, kernel_size=5)
         con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
         if do_erode:  # with erosion:
             # delete old labels and points - if we erode we will have fewer points

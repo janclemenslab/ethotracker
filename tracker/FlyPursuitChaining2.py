@@ -112,8 +112,8 @@ class Prc():
             res.frame_count = int(res.frame_count+1)
             foreground0 = res.background - frame[:, :, 0]
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
-            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
-            foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # get rid of specks
+            foreground = fg.erode(foreground, kernel_size=4)
+            foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
                 if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
@@ -137,8 +137,8 @@ class Prc():
                         for con in np.uintp(flybins[flycnt > 1]):
                             # 1. get bounding box around current comp for cropping frame
                             con_frame = this_foreground0.copy()
-                            con_frame[fg.erode(np.uint8(labeled_frame != con), 10) == 1] = 100  # mark background - erode to add padding around flies
-                            con_bb = fg.get_bounding_box(fg.dilate(np.uint8(con_frame != 100), 15) == 1)  # dilate to get enough margin around conn comp
+                            con_frame[fg.erode(labeled_frame != con, 10) == 1] = 100  # mark background - erode to add padding around flies
+                            con_bb = fg.get_bounding_box(fg.dilate(con_frame != 100, 15) == 1)  # dilate to get enough margin around conn comp
                             con_bb = con_bb[1][:, ::-1]  # [0] is bg, ::-1 order x,y
                             con_offset = np.min(con_bb, axis=0)  # get upper left corner of box - needed to transform positions back into global chamber coords
 
@@ -146,25 +146,25 @@ class Prc():
                             con_frame = this_foreground0.copy()
                             con_frame = fg.crop(con_frame, np.ravel(con_bb))
                             # mask indicating other comps -  we want to ignore those in the current comp
-                            con_frame_mask = fg.erode(np.uint8(fg.crop(labeled_frame, np.ravel(con_bb)) != con), 10) == 1
+                            con_frame_mask = fg.erode(fg.crop(labeled_frame, np.ravel(con_bb)) != con, 10) == 1
 
                             # 3. segment using clustering
                             #  - if >2 flies then use cluster results as seeds for watershed - usually refines fly positions if flies in a bunch
                             con_frame_thres = (-con_frame + 255) > res.threshold*255  # threshold current patch
-                            con_frame_thres_erode = fg.erode(con_frame_thres.astype(np.uint8), 7)  # amplify gaps/sepration between flies
+                            con_frame_thres_erode = fg.erode(con_frame_thres, 7)  # amplify gaps/sepration between flies
                             con_frame_thres_erode[con_frame_mask] = 0  # mask out adjecent flies/patches
                             # 4. if 2 flies in comp we stop here,
                             if flycnt[con] == 1:
                                 con_centers, con_labels, con_points = fg.segment_cluster(con_frame_thres_erode, num_clusters=flycnt[con])
                             # 4. if >2 flies in conn comp we watershed
                             else:  # only use additional watershed step when >2 flies in conn comp
-                                # 4a. try to set threshold as high as possible
+                                # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
                                 fly_area = 150
-                                while np.sum(con_frame_thres)>flycnt[con]*fly_area:
+                                while np.sum(con_frame_thres)>flycnt[con]*fly_area: # shouldn't we use a con_frame_thres with outside flies masked out???
                                     thres += 0.01
                                     con_frame_thres = (-con_frame + 255) > thres*255
-                                con_frame_thres = fg.erode(con_frame_thres.astype(np.uint8), 3)
+                                con_frame_thres = fg.erode(con_frame_thres, 3)
                                 # 4a. locally adaptive threshold finds gaps between flies
                                 ada = cv2.adaptiveThreshold((-con_frame + 255).astype(np.uint8), 255,
                                                             cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, 1)
