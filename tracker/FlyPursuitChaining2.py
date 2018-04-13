@@ -115,6 +115,7 @@ class Prc():
             foreground = fg.erode(foreground, kernel_size=4)
             foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
             for chb in uni_chambers:
+                FRAME_PROCESSING_ERROR = False  # flag if there were errors during processing of this frames so we can fall back to segment_cluster
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
                 if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                     centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
@@ -124,7 +125,6 @@ class Prc():
                     this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
                                                                                             foreground_cropped, minimal_size=5)
                     # assigning flies to conn comps
-                    # FIXME: make flybins proper indices: np.uintp(flybins + 0.5)
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                     # alternatively, we could simply "delete" empty conn comps
@@ -150,7 +150,7 @@ class Prc():
 
                             # 3. segment using clustering
                             #  - if >2 flies then use cluster results as seeds for watershed - usually refines fly positions if flies in a bunch
-                            con_frame_thres = (-con_frame + 255) > res.threshold*255  # threshold current patch
+                            con_frame_thres = (-con_frame+255) > res.threshold*255  # threshold current patch
                             con_frame_thres_erode = fg.erode(con_frame_thres, 7)  # amplify gaps/sepration between flies
                             con_frame_thres_erode[con_frame_mask] = 0  # mask out adjecent flies/patches
                             # 4. if 2 flies in comp we stop here,
@@ -161,19 +161,18 @@ class Prc():
                                 # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
                                 fly_area = 150
-                                while np.sum(con_frame_thres)>flycnt[con]*fly_area: # shouldn't we use a con_frame_thres with outside flies masked out???
-                                    thres += 0.01
-                                    con_frame_thres = (-con_frame + 255) > thres*255
+                                while np.sum(con_frame_thres) > flycnt[con]*fly_area:  # shouldn't we use a con_frame_thres with outside flies masked out???
+                                    thres += 0.01  # increment thres as long as there are too many foreground pixels for the number of flies
+                                    con_frame_thres = (-con_frame+255) > thres*255
                                 con_frame_thres = fg.erode(con_frame_thres, 3)
                                 # 4a. locally adaptive threshold finds gaps between flies
-                                ada = cv2.adaptiveThreshold((-con_frame + 255).astype(np.uint8), 255,
-                                                            cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, 1)
+                                ada = cv2.adaptiveThreshold((-con_frame+255).astype(np.uint8), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, 1)
                                 con_frame_thres[ada == 0] = 0
 
                                 # mask out adjacent flies/patches
                                 con_frame[con_frame_mask] = 0
 
-                                marker_positions = np.vstack(([0,0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
+                                marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
 
                                 # plt.subplot(121)
@@ -195,8 +194,10 @@ class Prc():
                             try:
                                 points = points[labels[:, 0] != con, :]
                                 labels = labels[labels[:, 0] != con]
-                            except:
-                                import ipdb; ipdb.set_trace()
+                            except Exception as e:
+                                print(e)
+                                FRAME_PROCESSING_ERROR = True
+                                frame_error[chb] = 4
                             # append new labels and points
                             if labels.shape[0] == 0:  # if all flies in a single component then labels/points will be empty we use default since max op will error
                                 new_con_labels = 100 + con_labels
@@ -210,10 +211,14 @@ class Prc():
                         # calculate positions for all flies
                         try:
                             centers[chb, :, :] = [np.median(points[labels[:, 0] == label, :], axis=0) for label in np.unique(labels)]
-                        except:
-                            print(f"{res.frame_count}: we lost at least one fly (probably) - falling back to segment cluster - should mark frame as potential jump")
+                        except Exception as e:
+                            print(e)
+                            FRAME_PROCESSING_ERROR = True
+                            frame_error[chb] = 5
+
+                        if FRAME_PROCESSING_ERROR:
+                            print(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
                             centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
-                            frame_error[chb] = 4
 
                     else:  # if still flies w/o conn compp fall back to segment_cluster
                         print(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
@@ -306,7 +311,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                     # get annotated frame if necessary
                     if save_video or (display is not None and res.frame_count % display == 0):
                         chamberID = 0  # fix to work with multiple chambers
-                        # frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
+                        #frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
                         frame_with_tracks = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                         frame_with_tracks = fg.annotate(frame_with_tracks,
                                                         centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
