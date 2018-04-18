@@ -155,10 +155,7 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     else:
         markers = np.zeros(frame.shape, dtype=np.uint8)
         for cnt, marker_position in enumerate(marker_positions):
-            try:
-                markers[int(np.floor(marker_position[0])), int(np.floor(marker_position[1]))] = int(cnt + 1)  # +1 since 0=background
-            except:
-                import ipdb; ipdb.set_trace()
+            markers[int(np.floor(marker_position[0])), int(np.floor(marker_position[1]))] = int(cnt + 1)  # +1 since 0=background
         # make segmentation more robust - dilation factor determines tolerance - bigger values allow catching the fly even if it moves quite a bit
         markers = dilate(markers, marker_dilation)
     bg_mask = frame < frame_threshold  # everything outside of mask is ignored - need to test robustness of threshold
