@@ -136,6 +136,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             try:  # attempt resume from intermediate results
                 res = Results(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
                 res_loaded = True
+                res.frame_count = start_frame
                 printf('resuming from {0}'.format(res.frame_count))
             except Exception as e:  # if fails start from scratch
                 res_loaded = False
@@ -184,8 +185,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                         #                                 lines=np.clip(np.uint(res.lines[res.frame_count, 0, 0:res.lines.shape[1], :, :]),0,10000))
                         uni_chambers = np.unique(res.chambers).astype(np.int)
                         frame_with_tracks = list()
-                        # import ipdb; ipdb.set_trace()
-                        for chamberID in range(np.max(uni_chambers)-1):
+                        for chamberID in range(np.max(uni_chambers)):
                             # tmp = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)
                             tmp = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB).astype(np.float32)/255.0
                             tmp = fg.annotate(tmp,
