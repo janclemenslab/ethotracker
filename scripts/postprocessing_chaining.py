@@ -119,8 +119,8 @@ def stats_by_group(data, grouping, fun):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('args.track_file_name', type=str, help='track file to process')
-    parser.add_argument('args.save_file_name', type=str, help='file to save results')
+    parser.add_argument('track_file_name', type=str, help='track file to process')
+    parser.add_argument('save_file_name', type=str, help='file to save results')
     parser.add_argument('-p', '--prot_file_name', type=str, help='protocol file')
     parser.add_argument('--networkmotifs', action='store_true', help='find network motifs (SLOW!)')
     args = parser.parse_args()
