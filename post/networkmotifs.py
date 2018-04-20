@@ -1,22 +1,30 @@
+#!/usr/bin/python3
+"""Analysis of network motifs."""
 import numpy as np
+import typing.Dict
 import networkx as nx
 import itertools
 
 
 def motif_counter(gr, mo, k):
-    """Counts motifs in a directed graph
-    :param gr: A ``DiGraph`` object
-    :param mo: A ``dict`` of motifs to count
-    :param k: An ``int`` specifying motif length
-    :returns: A ``dict`` with the number of each motifs, with the same keys as ``mo``
+    """Count motifs in a directed graph.
+
+    Args:
+        gr: `DiGraph` object
+        mo: `dict` of motifs to count
+        k: An `int` specifying motif length
+    Returns:
+        mcount: `dict` with the number of each motifs, with the same keys as ``mo``
+
+    From: https://gist.github.com/tpoisot/8582648
     This function is actually rather simple. It will extract all 3-grams from
     the original graph, and look for isomorphisms in the motifs contained
     in a dictionary. The returned object is a ``dict`` with the number of
     times each motif was found.::
         >>> print mcounter(gr, mo)
         {'S1': 4, 'S3': 0, 'S2': 1, 'S5': 0, 'S4': 3}
+
     """
-    # from: https://gist.github.com/tpoisot/8582648
     #This function will take each possible subgraph of gr of size 3, then
     #compare them to the mo dict using .subgraph() and is_isomorphic
     #This line simply creates a dictionary with 0 for all values, and the
@@ -44,7 +52,8 @@ def motif_counter(gr, mo, k):
     return mcount
 
 
-def generate_motifs(k):
+def generate_motifs(k: int) -> typing.Dict[str, nx.DiGraph]:
+    """Generate all topologically unique, directed graphs of size `k`."""
     combs = list(itertools.permutations(range(1,k+1), 2)) # all node combinations = all possible edges
     motifs = {}
     cnt = -1
@@ -71,7 +80,47 @@ def generate_motifs(k):
     return motifs
 
 
+def generate_chain(chain_length):
+    """Make a linear (chain) graph of a given size."""
+    G = nx.DiGraph()
+    for edg in range(chain_length):
+        G.add_edge(edg, edg+1)
+    return G
+
+
+def generate_circle(circle_size):
+    """Make a circular graph of a given size.
+
+    A circle is a chain with the end connected to the start.
+    """
+    G = generate_chain(circle_size)
+    G.add_edge(circle_size, 0)
+    return G
+
+
+def generate_special_motifs(kmin: int, kmax: int = 10) -> typing.Dict[str, nx.DiGraph]:
+    """Generate all circle and chain graphs with at least `kmin` and at most `kmax` nodes.
+
+    Args:
+        kmin: Minimal number of nodes in graphs
+        kmax: Maximum number of nodes in grapsh
+    Returns:
+        dict: Dictionary of graphs
+    """
+    special_motifs = dict()
+    for k in range(kmin, kmax):
+        special_motifs[f"chain{k+1}"] = generate_chain(k)
+        special_motifs[f"circle{k+1}"] = generate_circle(k)
+    return special_motifs
+
+
 def process_motifs(chainer, chainee, max_k=4):
+    """Count all motifs of size `max_k` in the network defined by chainer->chainee edges.
+
+    Returns:
+        motif_counts: `list` of counts for each motif in `motifs`
+        motifs: `dict`
+    """
     # autogenerate network motifs up to size max_k
     motifs = [0]*(max_k+1)
     nframes = chainer.shape[1]
