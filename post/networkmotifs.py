@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """Analysis of network motifs."""
 import numpy as np
-import typing.Dict
+import typing
 import networkx as nx
 import itertools
 
