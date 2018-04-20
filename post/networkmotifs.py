@@ -128,7 +128,8 @@ def process_motifs(chainer, chainee, max_k=4):
     for k in range(2,max_k+1):
         motifs[k] = generate_motifs(k)
         print(f"There exist {len(motifs[k])} topologically unique, directed motifs of size {k}")
-
+    motifs.append(generate_special_motifs(max_k, 10))
+    
     # motifs in all frames
     nmotifs = sum([len(b) for b in motifs[2:]])
     motif_counts = np.zeros((nmotifs, nframes), dtype=np.uint16)
