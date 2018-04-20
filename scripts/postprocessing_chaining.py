@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import numpy as np
 import h5py
-import sys
 import peakutils
 import os
 import scipy.signal
 import argparse
-from post.networkmotifs import *
-from post.chainingindex import *
-from post.fixtracks import *
+from post.networkmotifs import process_motifs
+from post.chainingindex import get_chainlength
+from post.fixtracks import fix_orientations
 
 
 def load_data(file_name):
@@ -124,15 +123,14 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--prot_file_name', type=str, help='protocol file')
     parser.add_argument('--networkmotifs', action='store_true', help='find network motifs (SLOW!)')
     args = parser.parse_args()
-    print(args)
-    prot_file_name = sys.argv[2]
-    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(args.track_file_name, prot_file_name, args.save_file_name))
+
+    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(args.track_file_name, args.save_file_name))
     chamber_number = 0
     # read tracking data
     pos, lines, led, nflies = load_data(args.track_file_name)
     # fix lines and get chaining IndexError
     lines_fixed = fix_orientations(lines)
-    chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number=0)
+    chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number)
     chain_length = get_chainlength(chainer, chainee, nflies)
     # save fixed lines and chaining data_chunks
     print(f'saving chaining data to {args.save_file_name}')
@@ -190,7 +188,7 @@ if __name__ == '__main__':
         # try to load log file and compute trial averages
         if args.protocol_file_name:
             # parse log file to get order of stimuli
-            prot = parse_prot(prot_file_name)
+            prot = parse_prot(args.prot_file_name)
             print(prot['stimFileName'])
 
             # average trials by stimulus
