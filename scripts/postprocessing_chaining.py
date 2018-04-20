@@ -5,6 +5,7 @@ import sys
 import peakutils
 import os
 import scipy.signal
+import argparse
 from post.networkmotifs import *
 from post.chainingindex import *
 from post.fixtracks import *
@@ -117,20 +118,25 @@ def stats_by_group(data, grouping, fun):
 
 
 if __name__ == '__main__':
-    track_file_name = sys.argv[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument('args.track_file_name', type=str, help='track file to process')
+    parser.add_argument('args.save_file_name', type=str, help='file to save results')
+    parser.add_argument('-p', '--prot_file_name', type=str, help='protocol file')
+    parser.add_argument('--networkmotifs', action='store_true', help='find network motifs (SLOW!)')
+    args = parser.parse_args()
+    print(args)
     prot_file_name = sys.argv[2]
-    save_file_name = sys.argv[3]
-    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(track_file_name, prot_file_name, save_file_name))
+    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(args.track_file_name, prot_file_name, args.save_file_name))
     chamber_number = 0
     # read tracking data
-    pos, lines, led, nflies = load_data(track_file_name)
+    pos, lines, led, nflies = load_data(args.track_file_name)
     # fix lines and get chaining IndexError
     lines_fixed = fix_orientations(lines)
     chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number=0)
     chain_length = get_chainlength(chainer, chainee, nflies)
     # save fixed lines and chaining data_chunks
-    print(f'saving chaining data to {save_file_name}')
-    with h5py.File(save_file_name, 'w') as f:
+    print(f'saving chaining data to {args.save_file_name}')
+    with h5py.File(args.save_file_name, 'w') as f:
         f.create_dataset('lines_fixed', data=lines_fixed, compression='gzip')
         f.create_dataset('chain_length', data=chain_length, compression='gzip')
         f.create_dataset('chainer', data=chainer, compression='gzip')
@@ -141,24 +147,31 @@ if __name__ == '__main__':
         f.create_dataset('D_h2h', data=D_h2h, compression='gzip')
         f.create_dataset('Dc', data=Dc, compression='gzip')
         f.create_dataset('Dh', data=Dh, compression='gzip')
+        f.create_dataset('track_file_name', data=np.array([args.track_file_name], dtype=object), dtype=h5py.special_dtype(vlen=str))
 
     # # network motifs
-    # motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
-    # with h5py.File(save_file_name, 'a') as f:
-    #     f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
-    #     # f.create_dataset('motifs', data=motifs, compression='gzip')
+    if args.networkmotifs:
+        print('   analyzing network motifs')
+        motif_counts, motifs = process_motifs(chainer, chainee, max_k=4)
+        print(f'saving network motif results')
+        with h5py.File(args.save_file_name, 'a') as f:
+            f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
+            f.create_dataset('motifs', data=motifs, compression='gzip')
 
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led[0], thres=0.8, min_interval=1000)
-    print(led_onsets)
+    print('found {0} led onsets'.format(len(led_onsets)))
+    print(f'saving led data')
+    with h5py.File(args.save_file_name, 'a') as f:
+        f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
+        f.create_dataset('led_offsets', data=led_offsets, compression='gzip')
     # plot LEDs and save fig
     try:
-        plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(save_file_name)[0] + '.png')
+        plot_led_peaks(led[0], led_onsets, led_offsets, os.path.splitext(args.save_file_name)[0] + '.png')
     except Exception as e:
         pass
 
     if len(led_onsets):
-        print('found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos[:, chamber_number, :, :])
         # chunk data
         chunklen = 13000
@@ -168,9 +181,14 @@ if __name__ == '__main__':
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[3000:3400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
+        print('saving speed data')
+        with h5py.File(args.save_file_name, 'a') as f:
+            f.create_dataset('spd_base', data=spd_base, compression='gzip')
+            f.create_dataset('spd_test', data=spd_test, compression='gzip')
+            f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
 
         # try to load log file and compute trial averages
-        try:
+        if args.protocol_file_name:
             # parse log file to get order of stimuli
             prot = parse_prot(prot_file_name)
             print(prot['stimFileName'])
@@ -184,24 +202,16 @@ if __name__ == '__main__':
             SF = 100 * Sidx + F  # grouping by STIM and FLY
 
             stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
-        except Exception as e:
-            print('error while reading snd_log and stim averaging:')
-            print(e)
+        else:
             # fall back values
             stimfly_labels = np.zeros((0, 0))
             stimfly_mean = np.zeros((0, 0))
             stimnames = ['unknown']
 
-        print(f'saving to {save_file_name}')
-        with h5py.File(save_file_name, 'a') as f:
-            f.create_dataset('spd_base', data=spd_base, compression='gzip')
-            f.create_dataset('spd_test', data=spd_test, compression='gzip')
-            f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
-            f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
-            f.create_dataset('led_offsets', data=led_offsets, compression='gzip')
+        print(f'saving tuning data to {args.save_file_name}')
+        with h5py.File(args.save_file_name, 'a') as f:
             f.create_dataset('stimfly_labels', data=stimfly_labels, compression='gzip')
             f.create_dataset('stimfly_mean', data=stimfly_mean, compression='gzip')
-            f.create_dataset('track_file_name', data=np.array([track_file_name], dtype=object), dtype=h5py.special_dtype(vlen=str))
             f.create_dataset('stim_names', data=np.array(stimnames, dtype=object), dtype=h5py.special_dtype(vlen=str))
     else:
-        print('ERROR: no LED onsets found. will not save.')
+        print('WARNING: no LED onsets found. will not save.')
