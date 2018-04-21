@@ -115,16 +115,15 @@ class Prc():
 
         # process
         while True:
-            frame, res = yield
+            frame, res = yield  # get new frame
             res.frame_count = int(res.frame_count+1)
             foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], res.threshold * 255)
-            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
-            # foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=4)
-            foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)
+            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
+            foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
 
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
-                if res.nflies>1:
+                if res.nflies == 1:
                     centers[chb, :, :], labels, points, _, area[0, chb] = fg.segment_center_of_mass(foreground_cropped)
                 else:
                     centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
@@ -133,8 +132,8 @@ class Prc():
                     for label in np.unique(labels):
                         lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
-            if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
-                for chb in uni_chambers:
+                if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
+                    # for chb in uni_chambers:
                     new_labels, centers[chb, :, :] = tk.match(old_centers[chb, :, :], centers[chb, :, :])
                     lines[chb, :, :, :] = lines[chb, new_labels, :, :]  # also re-order lines
             old_centers = np.copy(centers)  # remember

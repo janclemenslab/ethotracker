@@ -224,21 +224,20 @@ class Prc():
                         for label in np.unique(labels):
                             lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
-            if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
-                for ii in uni_chambers:
+                if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
                     new_labels, centers[chb, :, :] = tk.match(old_centers[chb, :, :], centers[chb, :, :])
                     lines[chb, :, :, :] = lines[chb, new_labels, :, :]  # also re-order lines
-            old_centers = np.copy(centers)  # remember
 
-            if old_lines is not None:  # fix forward/backward flips
-                for ii in uni_chambers:
-                    if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
+                if old_lines is not None and points.shape[0] > 0:   # check that we have not lost all flies in the current frame
                         for label in np.unique(labels):
                             lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
+
+            old_centers = np.copy(centers)  # remember
             old_lines = np.copy(lines)  # remember
 
             res.centers[res.frame_count, :, :, :] = centers
             res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
             res.frame_error[res.frame_count, :, :] = frame_error
             res.area[res.frame_count, :] = 0
+
             yield res, foreground
