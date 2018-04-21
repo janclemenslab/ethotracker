@@ -118,7 +118,7 @@ def segment_center_of_mass(frame):
     else:
         centers = np.nanmedian(points, axis=0)
         std = np.std(points, axis=0)
-        labels = np.ones(points.shape, dtype=np.uint)  # for compatibility with multi-object methods
+        labels = np.zeros((size, 1), dtype=np.uint)  # for compatibility with multi-object methods
     return centers, labels, points, std, size
 
 
