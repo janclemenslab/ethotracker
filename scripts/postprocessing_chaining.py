@@ -6,7 +6,7 @@ import os
 import scipy.signal
 import argparse
 from post.networkmotifs import process_motifs
-from post.chainingindex import get_chainlength
+from post.chainingindex import get_chainlength, get_chaining
 from post.fixtracks import fix_orientations
 
 
