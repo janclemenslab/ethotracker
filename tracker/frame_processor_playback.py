@@ -58,17 +58,15 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
 
 class Prc():
     def __init__(self, res):
-        self.frame_processor = self.process(res)
+        self.frame_processor = self._process_coroutine(res)
 
-    def prc(self, frame, res):
+    def process(self, frame, res):
         next(self.frame_processor)
         res, foreground = self.frame_processor.send((frame, res))
         return res, foreground
 
-    def process(self, res):
+    def _process_coroutine(self, res):
         """Coroutine for processing the frame.
-
-        
         """
 
         # init data structures
