@@ -13,21 +13,20 @@ plt.ion()
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res = Results()                     # init results object
-
     # A: estimate background
+    res.frame_channel = 0  # red is best but hard to detect chamber!
     bg = BackGround(vr)
     bg.estimate(num_bg_frames, start_frame)
-    res.background = bg.background[:, :, 0]
+    res.background = bg.background[:, :, res.frame_channel]
     vr.reset()
 
     # B: detect chambers
     res.chambers = fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=17)
-    # printf('found {0} chambers'.format( np.unique(res.chambers).shape[0]-1 ))
     # detect empty chambers
     vr.seek(start_frame)
     # 1. read frame and get foreground
     ret, frame = vr.read()
-    foreground = fg.threshold(res.background - frame[:, :, 0], threshold * 255)
+    foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], threshold * 255)
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
@@ -52,7 +51,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.status = "initialized"
     res.save(file_name=file_name[0:-4] + '.h5')
     # printf('saving init')
-    print('found {0} fly bearing chambers'.format( res.nchambers ))
+    print(f'found {res.nchambers} fly bearing chambers')
     return res
 
 
@@ -77,44 +76,47 @@ class Prc():
         old_lines = None
 
         area = np.zeros((1, res.nchambers, res.nflies))
+
+        # get list of chamber numbers and remove background "chamber"
         uni_chambers = np.unique(res.chambers).astype(np.int)
-        chamber_slices = [None] * int(res.nchambers + 1)
-        for ii in uni_chambers:
-            chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii, 0, 0]:res.chambers_bounding_box[ii, 1, 0],
-                                        res.chambers_bounding_box[ii, 0, 1]:res.chambers_bounding_box[ii, 1, 1]])
+        uni_chambers = uni_chambers[uni_chambers > 0] - 1  # get rid of background (0) and -1 makes sure chamber1 ==unichamber 0
+
+        # get slices for cropping foreground by chambers
+        chamber_slices = [None] * int(res.nchambers)
+        for chb in uni_chambers:
+            # FIXME: chambers_bounding_box[chb+1...] since box[0] is full frame/background - maybe fix that by removing background? will probably break things in playback tracker
+            chamber_slices[chb] = (np.s_[res.chambers_bounding_box[chb+1, 0, 0]:res.chambers_bounding_box[chb+1, 1, 0],
+                                        res.chambers_bounding_box[chb+1, 0, 1]:res.chambers_bounding_box[chb+1, 1, 1]])
+
         # process
         while True:
             frame, res = yield
             res.frame_count = int(res.frame_count+1)
-            foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
-            # foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
+            foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], res.threshold * 255)
+            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)
             # foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=4)
             foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)
-            # import ipdb; ipdb.set_trace()
-            # foreground = cv2.blur(foreground.astype(np.uint8)*255.0,(11,11))
-            for ii in uni_chambers:
-                if ii > 0:  # 0 is background
-                    foreground_cropped = foreground[chamber_slices[ii]] * (res.chambers[chamber_slices[ii]] == ii)  # crop frame to current chamber
-                    centers[ii - 1, :], labels, points, _, area[0, ii - 1] = fg.segment_center_of_mass(foreground_cropped)
-                    # centers[ii-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
-                    if points.shape[0] > 0:   # check that there we have not lost the fly in the current frame
-                        for label in np.unique(labels):
-                            lines[ii-1, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
+            for chb in uni_chambers:
+                foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
+                centers[chb, :], labels, points, _, area[0, chb] = fg.segment_center_of_mass(foreground_cropped)
+                # centers[chb-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+
+                if points.shape[0] > 0:   # check that we have not lost the fly in the current frame
+                    for label in np.unique(labels):
+                        lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
 
             if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
-                for ii in uni_chambers:
-                    if ii > 0:
-                        new_labels, centers[ii-1, :, :] = tk.match(old_centers[ii-1, :, :], centers[ii-1, :, :])
-                        lines[ii-1, :, :, :] = lines[ii-1, new_labels, :, :]  # also re-order lines
+                for chb in uni_chambers:
+                    new_labels, centers[chb, :, :] = tk.match(old_centers[chb, :, :], centers[chb, :, :])
+                    lines[chb, :, :, :] = lines[chb, new_labels, :, :]  # also re-order lines
             old_centers = np.copy(centers)  # remember
 
             if old_lines is not None:  # fix forward/backward flips
-                for ii in uni_chambers:
-                    if ii > 0:
-                        if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
-                            for label in np.unique(labels):
-                                lines[ii-1, label, :, :], is_flipped, D = tk.fix_flips(old_lines[ii-1, label, 0, :], lines[ii-1, label, :, :])
+                for chb in uni_chambers:
+                    if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
+                        for label in np.unique(labels):
+                            lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
             old_lines = np.copy(lines)  # remember
 
             res.centers[res.frame_count, :, :, :] = centers
