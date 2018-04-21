@@ -208,4 +208,7 @@ if __name__ == '__main__':
         print(f'saving network motif results')
         with h5py.File(args.save_file_name, 'a') as f:
             f.create_dataset('motif_counts', data=motif_counts, compression='gzip')
-            f.create_dataset('motifs', data=motifs, compression='gzip')
+            try:
+                f.create_dataset('motifs', data=motifs, compression='gzip')
+            except TypeError as te:
+                print(te)
