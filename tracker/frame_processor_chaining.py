@@ -1,11 +1,72 @@
 import numpy as np
 import cv2
+import os
+import yaml
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
+from tracker.VideoReader import VideoReader
+from tracker.BackGround import BackGroundMax
+from tracker.Results import Results
 
 import matplotlib.pyplot as plt
 plt.ion()
+
+
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, annotationfilename=None):
+    # TODO:
+    #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
+    #  provide these as args, if no chamber mask and box use full frame
+    #  chambers are detected automatically - e.g. in playback - or manually annotated
+    #  should be: binary image for mask and rect corrds for box (or infer box from mask)
+    #  background should be: matrix
+
+    res = Results()                     # init results object
+    bg = BackGroundMax(vr)
+    bg.estimate(num_bg_frames, start_frame)
+    res.background = bg.background[:, :, 0]
+    vr.reset()
+
+    # load annotation filename
+    annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
+    with open(annotationfilename, 'r') as stream:
+        ann = yaml.load(stream)
+
+    # LED mask
+    res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
+    res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
+    res.led_coords = fg.get_bounding_box(res.led_mask)  # get bounding boxes of remaining chambers
+    # chambers mask
+    res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
+    res.chambers = cv2.circle(res.chambers, (int(ann['centerX']), int(ann['centerY'])), int(ann['radius']+10), color=[1, 1, 1], thickness=-1)
+
+    # chambers bounding box
+    res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
+    # FIXME: no need to pre-pend background anymore
+    res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
+
+    res.centers_initial = ann['flypositions']
+    # init Results structure
+    res.nflies = int(ann['nFlies'])
+    res.nchambers = int(np.max(res.chambers))
+    res.file_name = file_name
+    res.start_frame = int(start_frame)
+    res.frame_count = int(start_frame)
+    res.number_of_frames = int(vr.number_of_frames)
+
+    res.centers = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
+    res.centers[res.frame_count, 0, :, :] = res.centers_initial
+    res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
+    res.lines = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
+    res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
+    res.quality = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
+    res.frame_error = np.zeros((res.number_of_frames + 1000, res.nchambers, 1), dtype=np.uint8)
+    res.frame_error_codes = None  # should be dictionary mapping error codes to messages
+    # save initialized results object
+    res.status = "initialized"
+    res.save(file_name=file_name[0:-4] + '.h5')
+    print(f'found {res.nchambers} fly bearing chambers')
+    return res
 
 
 class Prc():
