@@ -36,7 +36,7 @@ rule containerize:
 rule track:
     input:
         video="/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4",
-        background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png",
+        # background="/scratch/clemens10/playback/dat/{directory}/{videofile}.png",
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     params:
         logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log",
