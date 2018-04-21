@@ -124,8 +124,10 @@ class Prc():
 
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
-                centers[chb, :], labels, points, _, area[0, chb] = fg.segment_center_of_mass(foreground_cropped)
-                # centers[chb-1, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                if res.nflies>1:
+                    centers[chb, :, :], labels, points, _, area[0, chb] = fg.segment_center_of_mass(foreground_cropped)
+                else:
+                    centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
                 if points.shape[0] > 0:   # check that we have not lost the fly in the current frame
                     for label in np.unique(labels):
