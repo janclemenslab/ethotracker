@@ -6,7 +6,7 @@ directories = [directory for directory, file in zip(directories, files) if not f
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-# mp4files = expand("/scratch/clemens10/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
+mp4files = expand("/scratch/clemens10/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
 # bgdfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.png", zip, directory=directories, file=files)
 trkfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/playback/res/{directory}_spd.h5", zip, directory=directories, file=files)
