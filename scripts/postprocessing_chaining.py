@@ -155,7 +155,7 @@ if __name__ == '__main__':
         f.create_dataset('led_onsets', data=led_onsets, compression='gzip')
         f.create_dataset('led_offsets', data=led_offsets, compression='gzip')
 
-    if led_onsets:
+    if len(led_onsets):
         try:
             spd = get_speed(pos[:, chamber_number, :, :])
             # chunk data
