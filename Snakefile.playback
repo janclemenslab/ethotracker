@@ -6,29 +6,32 @@ directories = [directory for directory, file in zip(directories, files) if not f
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-#mp4files = expand("/scratch/clemens10/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
-bgdfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.png", zip, directory=directories, file=files)
+# mp4files = expand("/scratch/clemens10/playback/dat/{directory}/{file}.mp4", zip, directory=directories, file=files)
+# bgdfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.png", zip, directory=directories, file=files)
 trkfiles = expand("/scratch/clemens10/playback/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/playback/res/{directory}_spd.h5", zip, directory=directories, file=files)
 
 rule all:
-    input: bgdfiles, trkfiles, spdfiles
+    input: trkfiles, spdfiles
 
-#rule containerize:
-#    input:  "/scratch/clemens10/playback/dat/{directory}/{videofile}.h264"
-#    output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4"
-#    log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_containerize.log"
-#    shell: "ffmpeg -i {input} -vcodec copy {output}"
+rule mp4:
+    input: mp4files
 
-rule estimate_background:
-    input: "/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4"
-    output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
+rule containerize:
+   input:  "/scratch/clemens10/playback/dat/{directory}/{videofile}.h264"
+   output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4"
+   log:    "/scratch/clemens10/playback/dat/{directory}/{videofile}_containerize.log"
+   shell: "ffmpeg -i {input} -vcodec copy {output}"
 
-    params:
-        format="png",
-        nframes=1000,
-        logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_bg.log",
-    shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
+# rule estimate_background:
+#     input: "/scratch/clemens10/playback/dat/{directory}/{videofile}.mp4"
+#     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.png"
+#
+#     params:
+#         format="png",
+#         nframes=1000,
+#         logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_bg.log",
+#     shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input}"
 
 rule track:
     input:
@@ -37,7 +40,7 @@ rule track:
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     params:
         logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log",
-    shell: "python3 -m tracker.FlyPursuit {input.video} -p playback -t 0.3 --led_coords 0" # force automatic detection of led corner
+    shell: "python3 -m tracker.FlyPursuit {input.video} -p playback -t 0.2 --led_coords 0" # force automatic detection of led corner
 
 rule postprocess:
     input:
