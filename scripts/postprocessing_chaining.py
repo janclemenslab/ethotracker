@@ -124,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('--networkmotifs', action='store_true', help='find network motifs (SLOW!)')
     args = parser.parse_args()
 
-    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(args.track_file_name, args.save_file_name))
+    print('processing tracks in {0}. will save to {1}'.format(args.track_file_name, args.save_file_name))
     chamber_number = 0
     # read tracking data
     pos, lines, led, nflies = load_data(args.track_file_name)
