@@ -1,9 +1,8 @@
+"""Frame processor for tracking playback videos."""
 import numpy as np
-import cv2
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
-from tracker.VideoReader import VideoReader
 from tracker.BackGround import BackGround
 from tracker.Results import Results
 
@@ -12,6 +11,15 @@ plt.ion()
 
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
+    """Prepare frame processor.
+
+    Args:
+        vr, start_frame, threshold, nflies, file_name, num_bg_frames=100
+
+    Returns:
+        res: initialized Results object
+
+    """
     res = Results()                     # init results object
     # A: estimate background
     res.frame_channel = 0  # red is best but hard to detect chamber!
@@ -56,18 +64,35 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
 
 
 class Prc():
+    """Frame processor for tracking a frame.
+
+    Attributes:
+        likes_spam: A boolean indicating if we like SPAM or not.
+        eggs: An integer count of the eggs we have laid.
+
+    """
+
     def __init__(self, res):
+        """Initialize and return a frame processor instance. Needs Results object."""
         self.frame_processor = self._process_coroutine(res)
 
     def process(self, frame, res):
+        """Public interface for the frame processor. Hides the co-routine boiler plate code."""
         next(self.frame_processor)
         res, foreground = self.frame_processor.send((frame, res))
         return res, foreground
 
     def _process_coroutine(self, res):
         """Coroutine for processing the frame.
-        """
 
+        Args:
+            res: Results object
+        Receives:
+            frame:
+        Yields:
+            res: updated Results object
+            foreground:
+        """
         # init data structures
         centers = np.zeros((res.nchambers, res.nflies, 2))
         old_centers = None
@@ -86,7 +111,7 @@ class Prc():
         for chb in uni_chambers:
             # FIXME: chambers_bounding_box[chb+1...] since box[0] is full frame/background - maybe fix that by removing background? will probably break things in playback tracker
             chamber_slices[chb] = (np.s_[res.chambers_bounding_box[chb+1, 0, 0]:res.chambers_bounding_box[chb+1, 1, 0],
-                                        res.chambers_bounding_box[chb+1, 0, 1]:res.chambers_bounding_box[chb+1, 1, 1]])
+                                         res.chambers_bounding_box[chb+1, 0, 1]:res.chambers_bounding_box[chb+1, 1, 1]])
 
         # process
         while True:
@@ -104,7 +129,7 @@ class Prc():
 
                 if points.shape[0] > 0:   # check that we have not lost the fly in the current frame
                     for label in np.unique(labels):
-                        lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :]) # need to make this more robust - based on median center and some pixels around that...
+                        lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
             if res.nflies > 1 and old_centers is not None and old_lines is not None:  # match centers across frames - not needed for one fly per chamber
                 for chb in uni_chambers:
