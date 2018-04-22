@@ -149,7 +149,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         printf(repr(traceback.extract_tb(exc_traceback)))
         ee = e
         print(ee)
-        raise
+        print('---- returning w/o re-raising error ----')
+        return  # raise - do not reraise but return so snakemake does not delete results on error
     finally:  # clean up - will be called before return statement
         if display is not None:  # close any windows
             cv2.destroyAllWindows()
