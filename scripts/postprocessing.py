@@ -124,7 +124,7 @@ if __name__ == '__main__':
         pass
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
-        spd = get_speed(pos, 7)
+        spd = get_speed(pos[:,:,0,:], 7)
         # chunk data
         chunklen = 4000
         chunkpre = 2000
