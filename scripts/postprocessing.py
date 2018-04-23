@@ -37,8 +37,9 @@ def parse_prot(filename):
 
 def get_led_peaks(led, thres=0.8, min_interval=0):
     led_diff = np.diff(signal.savgol_filter(led, 11, 6)).T
-    led_onsets = peakutils.indexes(led_diff, thres=thres)
-    led_offsets = peakutils.indexes(-led_diff, thres=thres)
+    # import ipdb; ipdb.set_trace()
+    led_onsets = peakutils.indexes(led_diff[:,0], thres=thres)
+    led_offsets = peakutils.indexes(-led_diff[:,0], thres=thres)
 
     # filter out repeats
     # prepend large value to intervals so we keep the first on- and offsets
