@@ -3,7 +3,7 @@ import numpy as np
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
-from tracker.BackGround import BackGround
+from tracker.BackGround import BackGroundMax
 from tracker.Results import Results
 
 import matplotlib.pyplot as plt
@@ -23,7 +23,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res = Results()                     # init results object
     # A: estimate background
     res.frame_channel = 0  # red is best but hard to detect chamber!
-    bg = BackGround(vr)
+    bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, res.frame_channel]
     vr.reset()
