@@ -13,9 +13,9 @@ rule all:
 
 rule containerize:
     input:  '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.h264'
-    output: '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.mp4'
+    output: '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}.avi.bak'
     log:    '/Volumes/ukme04/#Common/playback/dat/{directory}/{videofile}_containerize.log'
-    shell: 'ffmpeg -i {input} -vcodec copy {output} -r 40'
+    shell: 'ffmpeg -i {input}.bal -vcodec copy {output}'
 
 rule upload:
     input: '/Volumes/ukme04/#Common/playback/dat'
