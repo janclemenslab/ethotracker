@@ -77,7 +77,7 @@ def segment_connected_components(frame, minimal_size=None):
 
     if minimal_size is not None:
         size = sci.labeled_comprehension(frame, labeled_frame, range(1, nlbl + 1), np.alen,
-                                 out_dtype=np.uint, default=0, pass_positions=False)
+                                         out_dtype=np.uint, default=0, pass_positions=False)
         for lbl in np.where(size < minimal_size):
             labeled_frame[labeled_frame==lbl+1] = 0  # remove
         tmp = labeled_frame.copy()
@@ -146,11 +146,10 @@ def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initia
     return centers, labels, points
 
 
-
 def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilation=3, marker_dilation=15, post_ws_mask=None):
     """Segment by applying watershed transform."""
     # markers provide "seeds" for the watershed transform - same shape as frame with pixels of different integer values for different segments
-    if np.all(marker_positions.shape==frame.shape):
+    if np.all(marker_positions.shape == frame.shape):
         markers = marker_positions
     else:
         markers = np.zeros(frame.shape, dtype=np.uint8)
@@ -167,7 +166,7 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     labels = labeled_frame[labeled_frame > 0]  # get all foreground labels
 
     points = getpoints(labeled_frame > 0)  # get position of all foreground pixels
-    number_of_segments = np.unique(labeled_frame)[1:].shape[0]+1 # +1 since 0 is background
+    number_of_segments = np.unique(labeled_frame)[1:].shape[0]+1  # +1 since 0 is background
     centers = np.zeros((number_of_segments, 2))
     std = np.zeros((number_of_segments, 2))
     size = np.zeros((number_of_segments, 1))
@@ -289,7 +288,7 @@ def split_connected_components_watershed(flybins, flycnt, this_labels, labeled_f
 
 
 def detect_led(frame, channel=-1):
-    """detect LED as darkest spot in channel(-1) in frame corner"""
+    """Detect LED as darkest spot in channel(-1) in frame corner."""
     # vertical and horizontal size of corners
     vsize = 80
     hsize = 200
@@ -316,7 +315,7 @@ def detect_led(frame, channel=-1):
 
 
 def get_chambers(background, chamber_threshold=0.6, min_size=40000, max_size=50000, kernel_size=11):
-    """detect (bright) chambers in background"""
+    """Detect (bright) chambers in background."""
     if len(background.shape) > 2:
         background = background[:, :, 0]
     background_thres = np.double(threshold(background, chamber_threshold * np.mean(background)))
