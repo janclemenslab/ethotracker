@@ -3,7 +3,7 @@ import numpy as np
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
-from tracker.BackGround import BackGroundMax
+from tracker.BackGround import BackGroundMax, BackGround
 from tracker.Results import Results
 
 import matplotlib.pyplot as plt
@@ -29,8 +29,10 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     vr.reset()
 
     # B: detect chambers
-    res.chambers = fg.get_chambers(res.background, chamber_threshold=1.0, min_size=30000, max_size=200000, kernel_size=17)
-    # detect empty chambers
+    # 0. detect chambers in background
+    bg = BackGround(vr)  # use mean background since max background merged LED with last chamber
+    bg.estimate(100, start_frame)
+    res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
     vr.seek(start_frame)
     # 1. read frame and get foreground
     ret, frame = vr.read()
