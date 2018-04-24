@@ -83,9 +83,13 @@ def chunk_data(data, cutpoints, chunklen):
     data_chunks = np.zeros((chunklen, 10000))
     cnt = 0
     for cutpoint in cutpoints:
-        this = data[cutpoint:cutpoint + chunklen, :]
-        data_chunks[:, cnt:cnt + this.shape[1]] = this
-        cnt += this.shape[1]
+        try:
+            this = data[cutpoint:cutpoint + chunklen, :]
+            data_chunks[:, cnt:cnt + data.shape[1]] = this
+        except ValueError:
+            data_chunks[:, cnt:cnt + data.shape[1]] = np.nan
+        finally:
+            cnt += this.shape[1]
     data_chunks = data_chunks[:, :cnt]  # keep only non-empty traces
     return data_chunks
 
@@ -124,10 +128,11 @@ if __name__ == '__main__':
         pass
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
-        spd = get_speed(pos[:,:,0,:], 7)
+        spd = get_speed(pos[:, :, 0, :], 7)
         # chunk data
         chunklen = 4000
         chunkpre = 2000
+
         trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
