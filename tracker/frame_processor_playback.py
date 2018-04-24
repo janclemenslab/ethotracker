@@ -29,7 +29,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     vr.reset()
 
     # B: detect chambers
-    res.chambers = fg.get_chambers(res.background, chamber_threshold=1.0, min_size=20000, max_size=200000, kernel_size=17)
+    res.chambers = fg.get_chambers(res.background, chamber_threshold=1.0, min_size=30000, max_size=200000, kernel_size=17)
     # detect empty chambers
     vr.seek(start_frame)
     # 1. read frame and get foreground
