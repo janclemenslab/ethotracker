@@ -120,7 +120,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('track_file_name', type=str, help='track file to process')
     parser.add_argument('save_file_name', type=str, help='file to save results')
-    parser.add_argument('-p', '--prot_file_name', type=str, help='protocol file')
+    parser.add_argument('-p', '--prot_file_name', type=str, default=None, help='protocol file')
     parser.add_argument('--networkmotifs', action='store_true', help='find network motifs (SLOW!)')
     args = parser.parse_args()
 
@@ -131,12 +131,13 @@ if __name__ == '__main__':
     # fix lines and get chaining IndexError
     lines_fixed = fix_orientations(lines)
     chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number)
-    chain_length = get_chainlength(chainer, chainee, nflies)
+    chain_length, chain_id = get_chainlength(chainer, chainee, nflies)
     # save fixed lines and chaining data_chunks
     print(f'saving chaining data to {args.save_file_name}')
     with h5py.File(args.save_file_name, 'w') as f:
         f.create_dataset('lines_fixed', data=lines_fixed, compression='gzip')
         f.create_dataset('chain_length', data=chain_length, compression='gzip')
+        f.create_dataset('chain_id', data=chain_id, compression='gzip')
         f.create_dataset('chainer', data=chainer, compression='gzip')
         f.create_dataset('chainee', data=chainee, compression='gzip')
         f.create_dataset('header', data=header, compression='gzip')
@@ -173,10 +174,10 @@ if __name__ == '__main__':
                 f.create_dataset('trial_traces', data=trial_traces, compression='gzip')
 
             # try to load log file and compute trial averages
-            if args.protocol_file_name:
+            if args.prot_file_name:
                 # parse log file to get order of stimuli
                 prot = parse_prot(args.prot_file_name)
-                print(prot['stimFileName'])
+                print('   ' + prot['stimFileName'])
 
                 # average trials by stimulus
                 X = trial_traces - spd_base  # subtract baseline from each trial
@@ -188,6 +189,7 @@ if __name__ == '__main__':
 
                 stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
             else:
+                print('   no prot file')
                 # fall back values
                 stimfly_labels = np.zeros((0, 0))
                 stimfly_mean = np.zeros((0, 0))
