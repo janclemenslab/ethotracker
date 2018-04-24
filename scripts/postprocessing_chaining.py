@@ -81,7 +81,7 @@ def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
 
 
 def get_speed(pos, medfiltlen=None):
-    spd = np.sqrt(np.sum(np.diff(pos, axis=0).astype(np.float32)**2, axis=2))
+    spd = np.sqrt(np.sum(np.gradient(pos, axis=0).astype(np.float32)**2, axis=2))
     if medfiltlen is not None:
         for fly in range(spd.shape[1]):
             spd[:, fly] = scipy.signal.medfilt(spd[:, fly], medfiltlen)
