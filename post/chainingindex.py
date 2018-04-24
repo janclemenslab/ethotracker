@@ -128,9 +128,6 @@ def get_chainlength(chainer, chainee, nflies):
 
             # which fly is in which chain? make boolean array [nflies, nchains] - allows to count flies twice for branching chains
             for this_chain_count, this_chain in enumerate(this_chains):
-                try:
-                    chain_id[list(this_chain), this_chain_count, frame_number] = True
-                except:
-                    import ipdb; ipdb.set_trace()
+                chain_id[list(this_chain), this_chain_count, frame_number] = True
 
     return chain_length, chain_id
