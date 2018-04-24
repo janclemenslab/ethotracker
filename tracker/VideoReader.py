@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import cv2
 from contextlib import contextmanager
 
@@ -19,6 +20,8 @@ class VideoReader:
     """
 
     def __init__(self, file_name, crop=None):
+        if not os.path.exist(file_name):
+            raise FileNotFoundError
         self._file_name = file_name
         self._vr = cv2.VideoCapture()
         self._vr.open(self._file_name)
@@ -80,7 +83,7 @@ def test():
     vr1 = VideoReader("test/160125_1811_1.avi")
     _, frame = vr1.read(100)
     cv2.imwrite("test/frame100.png", frame)
-   
+
 
     # `with` statement
     print("testing as context")
