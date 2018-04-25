@@ -131,13 +131,14 @@ if __name__ == '__main__':
     # fix lines and get chaining IndexError
     lines_fixed = fix_orientations(lines)
     chainee, chainer, headee, header, D_h2t, D_h2h, Dc, Dh = get_chaining(lines_fixed, chamber_number)
-    chain_length, chain_id = get_chainlength(chainer, chainee, nflies)
+    chain_length, chain_id, chain_nedges = get_chainlength(chainer, chainee, nflies)
     # save fixed lines and chaining data_chunks
     print(f'saving chaining data to {args.save_file_name}')
     with h5py.File(args.save_file_name, 'w') as f:
         f.create_dataset('lines_fixed', data=lines_fixed, compression='gzip')
         f.create_dataset('chain_length', data=chain_length, compression='gzip')
         f.create_dataset('chain_id', data=chain_id, compression='gzip')
+        f.create_dataset('chain_nedges', data=chain_nedges, compression='gzip')
         f.create_dataset('chainer', data=chainer, compression='gzip')
         f.create_dataset('chainee', data=chainee, compression='gzip')
         f.create_dataset('header', data=header, compression='gzip')
