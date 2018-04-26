@@ -10,6 +10,7 @@ fixfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.avi.bak", 
 bgdfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.png", zip, directory=directories, file=files)
 trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
+mtffiles = expand("/scratch/clemens10/chaining/res/{directory}_mtf.h5", zip, directory=directories, file=files)
 
 rule all:
     input: trkfiles, spdfiles
@@ -20,6 +21,7 @@ rule fix:
 rule post:
     input: spdfiles
 
+rule motifs:
 
 rule fix_videos:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
@@ -55,4 +57,13 @@ rule postprocess:
        snd_logs="/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
+   shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}"
+
+rule networkmotifs:
+   input:
+       speed="/scratch/clemens10/chaining/dat/{directory}/{directory}_spd.h5",
+   params:
+       logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
+   output: "/scratch/clemens10/chaining/res/{directory}_mtf.h5",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output} --networkmotifs"
+   # shell: "python3 ~/analysis/scripts/postprocessing_chaining_motifs.py {input.speed} {output}"
