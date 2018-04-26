@@ -22,6 +22,7 @@ rule post:
     input: spdfiles
 
 rule motifs:
+    input: mtffiles
 
 rule fix_videos:
     input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
