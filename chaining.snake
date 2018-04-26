@@ -57,7 +57,9 @@ rule postprocess:
        snd_logs="/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
-   shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}"
+   run:
+    shell("python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}")
+    shell("copy -vf {input.tracks} /scratch/clemens10/chaining/res")
 
 rule networkmotifs:
    input:
