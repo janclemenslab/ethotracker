@@ -60,7 +60,7 @@ rule postprocess:
    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
    run:
     shell("python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}")
-    shell("copy -vf {input.tracks} /scratch/clemens10/chaining/res")
+    shell("cp -vf {input.tracks} /scratch/clemens10/chaining/res/")
 
 rule networkmotifs:
    input:
