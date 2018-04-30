@@ -64,9 +64,8 @@ rule postprocess:
 
 rule networkmotifs:
    input:
-       speed="/scratch/clemens10/chaining/dat/{directory}/{directory}_spd.h5",
+       tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
    params:
        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
    output: "/scratch/clemens10/chaining/res/{directory}_mtf.h5",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output} --networkmotifs"
-   # shell: "python3 ~/analysis/scripts/postprocessing_chaining_motifs.py {input.speed} {output}"
