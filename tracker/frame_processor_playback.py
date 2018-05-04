@@ -26,17 +26,14 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, res.frame_channel]
-    vr.reset()
 
     # B: detect chambers
     # 0. detect chambers in background
     bg = BackGround(vr)  # use mean background since max background merged LED with last chamber
     bg.estimate(100, start_frame)
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
-    vr.seek(start_frame)
     # 1. read frame and get foreground
-    ret, frame = vr.read()
-    foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], threshold * 255)
+    foreground = fg.threshold(res.background - vr[0][:, :, res.frame_channel], threshold * 255)
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
@@ -122,6 +119,7 @@ class Prc():
             foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
             foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
+            # import ipdb; ipdb.set_trace()
 
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
