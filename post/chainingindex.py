@@ -63,7 +63,10 @@ def get_chainlength(chainer, chainee, nflies):
     chain_id = np.zeros((nflies, nflies, nframes), dtype=np.bool)
     chain_nedges = np.zeros((nflies, nframes), dtype=np.uint16)
     for frame_number in range(0, nframes):
-        edges = [(int(source), int(target)) for source, target in zip(chainer[:,frame_number], chainee[:,frame_number]) if source>0]
+        edges = [(int(source), int(target))
+                 for source, target
+                 in zip(chainer[:, frame_number], chainee[:, frame_number])
+                 if source > 0]
         if len(edges):
             G = nx.Graph(edges)
             subgraphs = list(nx.connected_component_subgraphs(G))
