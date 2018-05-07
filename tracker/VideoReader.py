@@ -11,7 +11,7 @@ class VideoReader:
         vr = VideoReader("video.avi")  # initialize
         # use as Sequence
         vr[frame_number]
-        vr[0:1000:10000]
+        vr[0:1000:10000]  # this will be a generator
         print(f'Video has {len(vr)} frames.')
         # use as generator/iterator
         for frame in vr:
@@ -55,7 +55,7 @@ class VideoReader:
     def __getitem__(self, index):
         """Now we can get frame via self[index] and self[start:stop:step]."""
         if isinstance(index, slice):
-            return [self[ii] for ii in range(*index.indices(len(self)))]
+            return (self[ii] for ii in range(*index.indices(len(self))))
         return self.read(index)[1]
 
     def __str__(self):
@@ -63,22 +63,6 @@ class VideoReader:
 
     def __iter__(self):
         return self.frames(start=0, stop=None, step=1)
-
-    def frames(self, start=0, stop=None, step=1):
-        """Yield all frames (or a `slice` thereof).
-
-        ARGS
-            start=0
-            stop=number of frames
-            step=1
-        YIELDS
-            frame
-        """
-        self._seek(start)
-        if stop is None:
-            stop = len(self)
-        for frame_number in range(start, stop, step):
-            yield self._vr.read()[1]
 
     def __enter__(self):
         return self
@@ -104,30 +88,3 @@ class VideoReader:
     def _seek(self, frame_number):
         """Go to frame."""
         self._vr.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-
-
-def _test(filename="/Users/janc/rpi8-20180206_185652/rpi8-20180206_185652.mp4"):
-    # standard usage
-    print("testing as standard class")
-    vr1 = VideoReader(filename)
-    print(vr1)
-    _, frame = vr1.read(100)
-    print(frame.shape)
-    # as sequence
-    vrlist = VideoReader(filename)
-    frame = vrlist[100]
-    for frame in vrlist[::10000]:
-        print(frame.shape)
-    # as context
-    print("testing as context")
-    with VideoReader(filename) as vr2:
-        print(vr2[0].shape)
-    # as generator
-    print("testing as generator")
-    vr3 = VideoReader(filename)
-    for frame in vr3.frames(start=100, stop=200, step=10):
-        print(frame.shape)
-
-
-if __name__ == "__main__":
-    _test()
