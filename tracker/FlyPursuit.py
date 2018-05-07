@@ -8,9 +8,9 @@ import os
 import logging
 import numpy as np
 
-from tracker.VideoReader import VideoReader
+from tracker.videoreader import VideoReader
 from tracker.attrdict import AttrDict
-import tracker.ForeGround as fg
+import tracker.foreground as fg
 
 
 def annotate_frame(frame, res, raw_frame=True):

@@ -2,9 +2,9 @@
 import numpy as np
 import logging
 
-import tracker.ForeGround as fg
-import tracker.Tracker as tk
-from tracker.BackGround import BackGroundMax, BackGround
+import tracker.foreground as fg
+import tracker.tracker as tk
+from tracker.background import BackGroundMax, BackGround
 from tracker.attrdict import AttrDict
 import matplotlib.pyplot as plt
 plt.ion()

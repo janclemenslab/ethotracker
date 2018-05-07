@@ -4,9 +4,9 @@ import os
 import yaml
 import logging
 
-import tracker.ForeGround as fg
-import tracker.Tracker as tk
-from tracker.BackGround import BackGroundMax
+import tracker.foreground as fg
+import tracker.tracker as tk
+from tracker.background import BackGroundMax
 from tracker.attrdict import AttrDict
 import matplotlib.pyplot as plt
 plt.ion()
