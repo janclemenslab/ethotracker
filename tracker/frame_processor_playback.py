@@ -1,11 +1,11 @@
 """Frame processor for tracking playback videos."""
 import numpy as np
+import logging
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
 from tracker.BackGround import BackGroundMax, BackGround
 from tracker.Results import Results
-
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -15,10 +15,8 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
 
     Args:
         vr, start_frame, threshold, nflies, file_name, num_bg_frames=100
-
     Returns:
         res: initialized Results object
-
     """
     res = Results()                     # init results object
     # A: estimate background

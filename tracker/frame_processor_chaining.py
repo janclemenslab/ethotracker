@@ -2,13 +2,12 @@ import numpy as np
 import cv2
 import os
 import yaml
+import logging
 
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
-from tracker.VideoReader import VideoReader
 from tracker.BackGround import BackGroundMax
 from tracker.Results import Results
-
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -64,7 +63,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     # save initialized results object
     res.status = "initialized"
     res.save(file_name=file_name[0:-4] + '.h5')
-    print(f'found {res.nchambers} fly bearing chambers')
+    logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
 
 
@@ -113,7 +112,7 @@ class Prc():
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
                 if old_centers is None:  # on first pass get initial values - this only works if first frame produces the correct segmentation
                     centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
-                    print(f"{res.frame_count}: restarting - clustering")
+                    logging.info(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
                     this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
@@ -206,16 +205,16 @@ class Prc():
                         try:
                             centers[chb, :, :] = [np.median(points[labels[:, 0] == label, :], axis=0) for label in np.unique(labels)]
                         except Exception as e:
-                            print(e)
+                            logging.error(e)
                             FRAME_PROCESSING_ERROR = True
                             frame_error[chb] = 5
 
                         if FRAME_PROCESSING_ERROR:
-                            print(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
+                            logging.info(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
                             centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
                     else:  # if still flies w/o conn compp fall back to segment_cluster
-                        print(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
+                        logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         frame_error[chb] = 3
 

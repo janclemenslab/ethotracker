@@ -6,6 +6,7 @@ import time
 import sys
 import traceback
 import os
+import logging
 
 from tracker.VideoReader import VideoReader
 from tracker.Results import Results
@@ -56,7 +57,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
 
-    print(f'processing {file_name}')
+    logging.info(f'processing {file_name}')
     vr = VideoReader(file_name)
 
     if not override:
@@ -67,7 +68,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                 start_frame = res.frame_count
             else:
                 res.frame_count = start_frame
-            print(f'resuming from {start_frame}')
+            logging.info(f'resuming from {start_frame}')
         except KeyboardInterrupt:
             raise
         except Exception as e:  # if fails start from scratch
@@ -77,10 +78,10 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
     if override or not res_loaded:  # re-initialize tracker
         if start_frame is None:
             start_frame = 0
-        print('start initializing')
+        logging.info('start initializing')
         res = init(vr, start_frame, threshold, nflies, file_name, )
-        print('done initializing')
-        pass
+        logging.info('done initializing')
+
 
     if len(led_coords) != 4:
         led_coords = fg.detect_led(vr[res.start_frame])
@@ -89,9 +90,9 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         return
 
     res.threshold = threshold
-    if save_video:
+    if save_pvideo:
         frame_size = tuple(np.uint(16 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 16)))
-        print('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
+        logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
         vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
                              fps=vr.frame_rate, frameSize=frame_size)
 
@@ -99,7 +100,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     # iterate over frames
     start = time.time()
-    for frame in vr.frames(start_frame):
+    for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, led_coords))
@@ -117,22 +118,22 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
                 vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
 
             if res.frame_count % save_interval == 0:
-                print('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
+                logging.info('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
                 start = time.time()
 
             if res.frame_count % save_interval == 0:
                 res.status = "progress"
                 res.save(file_name[0:-4] + '.h5')
-                print("    saving intermediate results")
+                logging.info("    saving intermediate results")
         except KeyboardInterrupt:
             raise
         except Exception as e:  # catch errors during frame processing
-            print(f'---- error processing frame {res.frame_count} ----')
+            logging.error(f'---- error processing frame {res.frame_count} ----')
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
-            print(repr(traceback.extract_tb(exc_traceback)))
+            logging.error(repr(traceback.extract_tb(exc_traceback)))
             ee = e
-            print(ee)
+            logging.error(ee)
             # clean up - will be called before
             if save_video:
                 vw.release()
@@ -140,10 +141,10 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             return -1
 
     # save results and clean up
-    print("finished processing frames - saving results")
+    logging.info("finished processing frames - saving results")
     res.status = "done"
     res.save(file_name[0:-4] + '.h5')
-    print("             done.")
+    logging.info("             done.")
     return 1
 
 
@@ -161,6 +162,8 @@ if __name__ == "__main__":
     parser.add_argument('--led_coords', nargs='+', type=int, default=[10, 550, 100, -1], help='should be a sequence of 4 values OTHERWISE will autodetect')
     args = parser.parse_args()
 
-    print('Tracking {0} flies in {1}.'.format(args.nflies, args.file_name))
+    logging.basicConfig(level=logging.INFO)
+    logging.info('Tracking {0} flies in {1}.'.format(args.nflies, args.file_name))
+
     run(args.file_name, init_only=args.init_only, override=args.override, display=args.display, save_video=args.save_video,
         nflies=args.nflies, threshold=args.threshold, start_frame=args.start_frame, led_coords=args.led_coords, processor=args.processor)
