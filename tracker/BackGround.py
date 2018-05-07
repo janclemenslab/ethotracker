@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from .VideoReader import video_file
 import argparse
 import os
 
@@ -15,88 +14,79 @@ class BackGround():
           background_count - number of frames which have been averaged to get `background`
        METHODS
           estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
-          update(frame) - background with frame
           save(file_name) - save `background` to file_name.PNG
           load(file_name) - load `background` from file_name (uses cv2.imread)
     """
 
     def __init__(self, vr):
-        """Constructor - vr is VideoReader instance."""
+        """Construct - vr is VideoReader instance."""
         self.vr = vr
+        self.frames = []
         self.background = np.zeros((self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels))
         self.background_count = 0
 
     def estimate(self, num_bg_frames=100, start_frame=1):
-        """estimate back ground from video
-              num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
+        """Estimate back ground from video.
+
+        `_accumulate` and then `_normalize` frames - these can be overridden.
+        Args:
+            num_bg_frames: number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
+            start_frame: first frame to read
+        Returns:
+            background
         """
-        frame_numbers = np.linspace(start_frame, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
-        for fr in frame_numbers:
-            ret, frame = self.vr.read(fr)
-            if ret and frame is not None:
-                self.update(frame)
-        self.background = self.background / self.background_count
+        frame_interval = int(len(self.vr)/num_bg_frames)
+        stop_frame = len(self.vr)
+        for frame in self.vr[start_frame:stop_frame:frame_interval]:
+            if frame is not None:
+                self._accumulate(frame)
+        self._normalize()
         return self.background
 
-    def update(self, frame):
-        """updates background (mean frame) with `frame`"""
+    def _accumulate(self, frame):
+        """Updates background with `frame`."""
         cv2.accumulate(frame, self.background)
         self.background_count += 1
 
+    def _normalize(self):
+        self.background = self.background / self.background_count
+
     def save(self, file_name):
-        """save `background` as file_name.PNG for later reference"""
+        """Save `background` as file_name.PNG."""
         return cv2.imwrite(file_name, self.background)
 
     def save_binary(self, file_name):
-        """Save `background` as file_name.NPY for later reference"""
+        """Save `background` as file_name.NPY."""
         return np.savez(file_name, self.background)
 
     def load(self, file_name):
-        """load `background` from file_name"""
-        try:
-            self.background = cv2.imread(file_name)
-        except Exception:
-            pass
+        """Load `background` from file_name."""
+        self.background = cv2.imread(file_name)
 
 
 class BackGroundMax(BackGround):
     """Calculate background as maximum over frames."""
 
-    def estimate(self, num_bg_frames=100, start_frame=1):
-        """estimate back ground from video
-              num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
-        """
-        frame_numbers = np.linspace(start_frame, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
-        for fr in frame_numbers:
-            ret, frame = self.vr.read(fr)
-            if ret and frame is not None:
-                self.update(frame)
-
-    def update(self, frame):
-        """updates background (mean frame) with `frame`"""
+    def _accumulate(self, frame):
+        """Update background (mean frame) with `frame`."""
         self.background = np.maximum(frame, self.background)  # element-wise max operation
         self.background_count += 1
+
+    def _normalize(self):
+        # nothing to do - overwrite parent function with this empty one
+        pass
 
 
 class BackGroundMedian(BackGround):
     """Calculate background as median over frames. Memory intensive."""
 
-    def estimate(self, num_bg_frames=100, start_frame=1):
-        """estimate back ground from video
-              num_bg_frames - number of (evenly spaced) frames (spannig whole video) over which to average (defaut 100)
-        """
-        frame_numbers = np.linspace(start_frame, self.vr.number_of_frames, num_bg_frames).astype(int)  # evenly sample movie
-        self.frames = []
-        for fr in frame_numbers:
-            ret, frame = self.vr.read(fr)
-            if ret and frame is not None:
-                self.update(frame)
-        self.background = np.nanmedian(self.frames, axis=0)
-
-    def update(self, frame):
-        """Updates background (mean frame) with `frame`."""
+    def _accumulate(self, frame):
+        """_accumulates background (mean frame) with `frame`."""
         self.frames.append(frame)
         self.background_count += 1
+
+    def _normalize(self):
+        self.background = np.nanmedian(self.frames, axis=0)
 
 
 if __name__ == "__main__":
@@ -110,7 +100,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
-    with video_file(args.filename) as vr:
+    from tracker.VideoReader import VideoReader
+    with VideoReader(args.filename) as vr:
         if args.type == 'max':
             bg = BackGroundMax(vr)
         elif args.type == 'median':
