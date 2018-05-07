@@ -5,7 +5,7 @@ import logging
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
 from tracker.BackGround import BackGroundMax, BackGround
-from tracker.Results import Results
+from tracker.attrdict import AttrDict
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -18,7 +18,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     Returns:
         res: initialized Results object
     """
-    res = Results()                     # init results object
+    res = AttrDict()                     # init results object
     # A: estimate background
     res.frame_channel = 0  # red is best but hard to detect chamber!
     bg = BackGroundMax(vr)
@@ -54,9 +54,9 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
     # save initialized results object
     res.status = "initialized"
-    res.save(file_name=file_name[0:-4] + '.h5')
+    res.save(file_name[0:-4] + '.h5')
     # printf('saving init')
-    print(f'found {res.nchambers} fly bearing chambers')
+    logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
 
 

@@ -7,7 +7,7 @@ import logging
 import tracker.ForeGround as fg
 import tracker.Tracker as tk
 from tracker.BackGround import BackGroundMax
-from tracker.Results import Results
+from tracker.attrdict import AttrDict
 import matplotlib.pyplot as plt
 plt.ion()
 
@@ -20,7 +20,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     #  should be: binary image for mask and rect corrds for box (or infer box from mask)
     #  background should be: matrix
 
-    res = Results()                     # init results object
+    res = AttrDict()                     # init results object
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
@@ -62,7 +62,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     res.frame_error_codes = None  # should be dictionary mapping error codes to messages
     # save initialized results object
     res.status = "initialized"
-    res.save(file_name=file_name[0:-4] + '.h5')
+    res.save(file_name[0:-4] + '.h5')
     logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
 

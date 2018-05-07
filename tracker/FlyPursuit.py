@@ -1,5 +1,4 @@
 """Track videos."""
-import numpy as np
 import cv2
 import argparse
 import time
@@ -7,9 +6,10 @@ import sys
 import traceback
 import os
 import logging
+import numpy as np
 
 from tracker.VideoReader import VideoReader
-from tracker.Results import Results
+from tracker.attrdict import AttrDict
 import tracker.ForeGround as fg
 
 
@@ -62,7 +62,8 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     if not override:
         try:  # attempt resume from intermediate results
-            res = Results(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
+            # res = Results(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
+            res = AttrDict().load(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
             res_loaded = True
             if start_frame is None:
                 start_frame = res.frame_count
@@ -90,7 +91,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         return
 
     res.threshold = threshold
-    if save_pvideo:
+    if save_video:
         frame_size = tuple(np.uint(16 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 16)))
         logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
         vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
