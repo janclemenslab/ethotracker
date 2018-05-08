@@ -1,15 +1,15 @@
-# list all video files
+ # list all video files
 rootdir = '/scratch/clemens10/chaining'
-directories, files, = glob_wildcards('{rootdir}/dat/{directory}/{file}.avi')
+directories, files, = glob_wildcards(f'{rootdir}/dat/{directory}/{file}.avi')
 
 # remove hidden
 directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-trkfiles = expand("{rootdir}/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
-spdfiles = expand("{rootdir}/res/{directory}_spd.h5", zip, directory=directories, file=files)
-mtffiles = expand("{rootdir}/res/{directory}_mtf.h5", zip, directory=directories, file=files)
+trkfiles = expand(f"{rootdir}/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
+spdfiles = expand(f"{rootdir}/res/{directory}_spd.h5", zip, directory=directories, file=files)
+mtffiles = expand(f"{rootdir}/res/{directory}_mtf.h5", zip, directory=directories, file=files)
 
 rule all:
     input: trkfiles, spdfiles
