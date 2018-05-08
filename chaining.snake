@@ -1,22 +1,18 @@
 # list all video files
-directories, files, = glob_wildcards('/scratch/clemens10/chaining/dat/{directory}/{file}.avi')
+rootdir = '/scratch/clemens10/chaining'
+directories, files, = glob_wildcards('{rootdir}/dat/{directory}/{file}.avi')
 
 # remove hidden
 directories = [directory for directory, file in zip(directories, files) if not file.startswith('.')]
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-fixfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.avi.bak", zip, directory=directories, file=files)
-bgdfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.png", zip, directory=directories, file=files)
-trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
-spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
-mtffiles = expand("/scratch/clemens10/chaining/res/{directory}_mtf.h5", zip, directory=directories, file=files)
+trkfiles = expand("{rootdir}/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
+spdfiles = expand("{rootdir}/res/{directory}_spd.h5", zip, directory=directories, file=files)
+mtffiles = expand("{rootdir}/res/{directory}_mtf.h5", zip, directory=directories, file=files)
 
 rule all:
     input: trkfiles, spdfiles
-
-rule fix:
-    input: fixfiles
 
 rule post:
     input: spdfiles
@@ -24,48 +20,31 @@ rule post:
 rule motifs:
     input: mtffiles
 
-rule fix_videos:
-    input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi.bak",
-    params:
-        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_fix.log",
-    shell: "mv {input} {output}; ffmpeg -i {output} -c copy {input}"
-
-rule estimate_background:
-    input: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
-    params:
-        format="png",
-        nframes=1000,
-        type="max",
-        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_bg.log",
-    shell: "python3 -m tracker.BackGround -n {params.nframes} -f {params.format} --savebin {input} -t {params.type}"
-
 rule track:
     input:
-        video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
-        # background="/scratch/clemens10/chaining/dat/{directory}/{videofile}.png",
+        video="{rootdir}/dat/{directory}/{videofile}.avi",
+        # background="{rootdir}/dat/{directory}/{videofile}.png",
     params:
         runtime="48:00",
-        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.log",
-    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}.h5",
+        logfile="{rootdir}/dat/{directory}/{videofile}_track.log",
+    output: "{rootdir}/dat/{directory}/{videofile}.h5",
     shell: "python3 -m tracker.FlyPursuit {input.video} -p chaining -t 0.25 --led_coords 0" # force automatic detection of led corner
 
 rule postprocess:
    input:
-       tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+       tracks="{rootdir}/dat/{directory}/{directory}.h5",
    params:
-       snd_logs="/scratch/clemens10/chaining/dat/{directory}/{directory}_snd.log",
-       logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
-   output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
+       snd_logs="{rootdir}/dat/{directory}/{directory}_snd.log",
+       logfile="{rootdir}/dat/{directory}/{directory}_post.log",
+   output: "{rootdir}/res/{directory}_spd.h5",
    run:
     shell("python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}")
-    shell("cp -vf {input.tracks} /scratch/clemens10/chaining/res/")
+    shell("cp -vf {input.tracks} {rootdir}/res/")
 
 rule networkmotifs:
    input:
-       tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+       tracks="{rootdir}/dat/{directory}/{directory}.h5",
    params:
-       logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
-   output: "/scratch/clemens10/chaining/res/{directory}_mtf.h5",
+       logfile="{rootdir}/dat/{directory}/{directory}_motif.log",
+   output: "{rootdir}/res/{directory}_mtf.h5",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output} --networkmotifs"
