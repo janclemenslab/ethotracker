@@ -58,7 +58,7 @@ class VideoReader:
             return (self[ii] for ii in range(*index.indices(len(self))))
         return self.read(index)[1]
 
-    def __str__(self):
+    def __repr__(self):
         return f"{self._filename} with {len(self)} frames at {self.frame_rate} fps"
 
     def __iter__(self):
@@ -68,7 +68,8 @@ class VideoReader:
         return self
 
     def __exit__(self, *args):
-        self.close()
+        """Release video file."""
+        self._vr.release()
 
     def read(self, frame_number=None):
         """Read next frame or frame specified by `frame_number`."""
@@ -76,10 +77,6 @@ class VideoReader:
             self._seek(frame_number)
         ret, frame = self._vr.read()  # read
         return ret, frame
-
-    def close(self):
-        """Release video file."""
-        self._vr.release()
 
     def _reset(self):
         """Re-initialize object."""
