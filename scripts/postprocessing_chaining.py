@@ -19,7 +19,7 @@ def load_data(file_name):
             lines = f['lines'][:]
             start_frame = f['start_frame'].value
     except KeyError as e:
-        pos, led, lines, start_frame = dd.io.load(file_name, ['/pos', '/led', '/lines', '/start_frame'])
+        pos, led, lines, start_frame = dd.io.load(file_name, ['/centers', '/led', '/lines', '/start_frame'])
     pos = pos[start_frame + 1:-1000, :, :]
     led = led[start_frame + 1:-1000, 0].T
 
