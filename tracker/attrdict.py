@@ -23,14 +23,14 @@ class AttrDict(defaultdict):
             d = {}
         if kwargs:
             d.update(**kwargs)
-        for k, v in d.items():
-            setattr(self, k, v)
+        for key, value in d.items():
+            setattr(self, key, value)
 
-    def __getattr__(self, name):
-        return self[name]
+    def __getattr__(self, key):
+        return self[key]
 
-    def __setattr__(self, name, value):
-        self[name] = value
+    def __setattr__(self, key, value):
+        self[key] = value
 
     def save(self, filename, compression='blosc'):
         dd.io.save(filename, self, compression=compression)
