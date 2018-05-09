@@ -11,11 +11,14 @@ from post.fixtracks import fix_orientations
 
 
 def load_data(file_name):
-    with h5py.File(file_name, 'r') as f:
-        pos = f['centers'][:]
-        led = f['led'][:]
-        lines = f['lines'][:]
-        start_frame = f['start_frame'].value
+    try:
+        with h5py.File(file_name, 'r') as f:
+            pos = f['centers'][:]
+            led = f['led'][:]
+            lines = f['lines'][:]
+            start_frame = f['start_frame'].value
+    except KeyError as e:
+        post, led, lines, start_frame = dd.io.load(file_name, ['/pos', '/led', '/lines', '/start_frame'])
     pos = pos[start_frame + 1:-1000, :, :]
     led = led[start_frame + 1:-1000, 0].T
 
