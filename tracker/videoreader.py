@@ -46,7 +46,10 @@ class VideoReader:
         self.fourcc = int(self._vr.get(cv2.CAP_PROP_FOURCC))
 
     def __del__(self):
-        self._vr.release()
+        try:
+            self._vr.release()
+        except AttributeError: # if file does not exist this will be raised since not _vr exists
+            pass
 
     def __len__(self):
         """Length is number of frames."""
@@ -69,7 +72,7 @@ class VideoReader:
 
     def __exit__(self, *args):
         """Release video file."""
-        self._vr.release()
+        del(self)
 
     def read(self, frame_number=None):
         """Read next frame or frame specified by `frame_number`."""
