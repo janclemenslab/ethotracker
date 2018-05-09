@@ -37,14 +37,14 @@ class BackGround():
         """
         frame_interval = int(len(self.vr)/num_bg_frames)
         stop_frame = len(self.vr)
-        for frame in self.vr[start_frame:stop_frame:frame_interval]:
+        for frame in self.vr[int(start_frame):stop_frame:frame_interval]:
             if frame is not None:
                 self._accumulate(frame)
         self._normalize()
         return self.background
 
     def _accumulate(self, frame):
-        """Updates background with `frame`."""
+        """Update background with `frame`."""
         cv2.accumulate(frame, self.background)
         self.background_count += 1
 
