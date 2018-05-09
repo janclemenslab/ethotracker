@@ -46,7 +46,7 @@ class VideoReader:
         self.fourcc = int(self._vr.get(cv2.CAP_PROP_FOURCC))
 
     def __del__(self):
-        self.close()
+        self._vr.release()
 
     def __len__(self):
         """Length is number of frames."""
