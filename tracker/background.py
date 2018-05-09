@@ -64,7 +64,7 @@ class BackGround():
         self.background = cv2.imread(file_name)
 
 
-class BackGroundMean():
+class BackGroundMean(BackGround):
     """Calculate background as mean over frames."""
 
     def _accumulate(self, frame):
