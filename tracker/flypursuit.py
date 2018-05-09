@@ -19,10 +19,12 @@ def annotate_frame(frame, res, raw_frame=True):
     frame_with_tracks = list()
     for chamberID in range(np.max(uni_chambers)):
         if raw_frame:
-            tmp = cv2.cvtColor(np.uint8(fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB)
+            tmp = fg.crop(frame[:, :, 0], np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))
+            tmp = cv2.cvtColor(np.uint8(tmp), cv2.COLOR_GRAY2RGB)
             tmp = tmp.astype(np.float32)/255.0
         else:  # otherwise use background subtracted and thresholded frames
-            tmp = cv2.cvtColor(np.uint8(fg.crop(foreground, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))), cv2.COLOR_GRAY2RGB)
+            tmp = fg.crop(frame, np.ravel(res.chambers_bounding_box[chamberID+1][:, ::-1]))
+            tmp = cv2.cvtColor(np.uint8(tmp), cv2.COLOR_GRAY2RGB)
             tmp = tmp.astype(np.float32)
         tmp = fg.annotate(tmp,
                           centers=np.clip(np.uint(res.centers[res.frame_count, chamberID, :, :]), 0, 10000),
