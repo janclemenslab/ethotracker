@@ -62,7 +62,6 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     if not override:
         try:  # attempt resume from intermediate results
-            # res = Results(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
             res = AttrDict().load(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
             res_loaded = True
             if start_frame is None:
@@ -101,6 +100,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     # iterate over frames
     start = time.time()
+    vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
     for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
@@ -138,7 +138,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             # clean up - will be called before
             if save_video:
                 vw.release()
-            vr.close()
+            del(vr)
             return -1
 
     # save results and clean up
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--nflies', type=int, default=1, help='number of flies in video')
     parser.add_argument('-d', '--display', type=int, default=None, help='show every Nth frame')
     parser.add_argument('-t', '--threshold', type=float, default=0.4, help='threshold for foreground detection, defaults to 0.3')
-    parser.add_argument('-s', '--start_frame', type=float, default=None, help='first frame to track, defaults to 0')
+    parser.add_argument('-s', '--start_frame', type=int, default=None, help='first frame to track, defaults to 0')
     parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
     parser.add_argument('-p', '--processor', type=str, choices=['chaining', 'playback'], default='chaining', help='class to process frames')
     parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
