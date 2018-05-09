@@ -4,7 +4,7 @@ import logging
 
 import tracker.foreground as fg
 import tracker.tracker as tk
-from tracker.background import BackGroundMax, BackGround
+from tracker.background import BackGroundMax, BackGroundMean
 from tracker.attrdict import AttrDict
 import matplotlib.pyplot as plt
 plt.ion()
@@ -27,7 +27,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
 
     # B: detect chambers
     # 0. detect chambers in background
-    bg = BackGround(vr)  # use mean background since max background merged LED with last chamber
+    bg = BackGroundMean(vr)  # use mean background since max background merged LED with last chamber
     bg.estimate(100, start_frame)
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
     # 1. read frame and get foreground

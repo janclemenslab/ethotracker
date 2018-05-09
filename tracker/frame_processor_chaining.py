@@ -20,7 +20,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     #  should be: binary image for mask and rect corrds for box (or infer box from mask)
     #  background should be: matrix
 
-    res = AttrDict()                     # init results object
+    res = AttrDict()
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]

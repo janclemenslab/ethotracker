@@ -1,3 +1,4 @@
+"""A family of classes for estimating backgrounds."""
 import numpy as np
 import cv2
 import argparse
@@ -5,17 +6,17 @@ import os
 
 
 class BackGround():
-    """Calculate background as mean over frames.
+    """Calculate background as mean over frames - abstract base class.
 
-       ARGS
-          vr - VideoReader instance
-       VARS
-          background       - background estimate (avg frame)
-          background_count - number of frames which have been averaged to get `background`
-       METHODS
-          estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
-          save(file_name) - save `background` to file_name.PNG
-          load(file_name) - load `background` from file_name (uses cv2.imread)
+    ARGS
+        vr - VideoReader instance
+    VARS
+        background       - background estimate (avg frame)
+        background_count - number of frames which have been averaged to get `background`
+    METHODS
+        estimate(num_bg_frames=100) - estimate background from `num_bg_frames` covering whole video
+        save(file_name) - save `background` to file_name.PNG
+        load(file_name) - load `background` from file_name (uses cv2.imread)
     """
 
     def __init__(self, vr):
@@ -45,11 +46,10 @@ class BackGround():
 
     def _accumulate(self, frame):
         """Update background with `frame`."""
-        cv2.accumulate(frame, self.background)
-        self.background_count += 1
+        raise NotImplementedError
 
     def _normalize(self):
-        self.background = self.background / self.background_count
+        raise NotImplementedError
 
     def save(self, file_name):
         """Save `background` as file_name.PNG."""
@@ -62,6 +62,18 @@ class BackGround():
     def load(self, file_name):
         """Load `background` from file_name."""
         self.background = cv2.imread(file_name)
+
+
+class BackGroundMean():
+    """Calculate background as mean over frames."""
+
+    def _accumulate(self, frame):
+        """Update background with `frame`."""
+        cv2.accumulate(frame, self.background)
+        self.background_count += 1
+
+    def _normalize(self):
+        self.background = self.background / self.background_count
 
 
 class BackGroundMax(BackGround):
@@ -95,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--num_bg_frames', type=int, default=100, help='number of frames for estimating background (100)')
     parser.add_argument('-f', '--format', type=str, default='png', help='image format for background (png)')
     parser.add_argument('-s', '--savebin', action='store_true', help='save as binary matrix (npy-format)')
-    parser.add_argument('-t', '--type', action='store', choices=['mean','max', 'median'], default='mean')
+    parser.add_argument('-t', '--type', action='store', choices=['mean', 'max', 'median'], default='mean')
 
     args = parser.parse_args()
     print(args)
