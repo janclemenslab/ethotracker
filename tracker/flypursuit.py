@@ -62,7 +62,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     if not override:
         try:  # attempt resume from intermediate results
-            res = AttrDict().load(file_name=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
+            res = AttrDict().load(filename=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
             res_loaded = True
             if start_frame is None:
                 start_frame = res.frame_count
@@ -72,6 +72,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         except KeyboardInterrupt:
             raise
         except Exception as e:  # if fails start from scratch
+            print(e)
             res_loaded = False
             pass
 
@@ -81,6 +82,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         logging.info('start initializing')
         res = init(vr, start_frame, threshold, nflies, file_name, )
         logging.info('done initializing')
+        vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
 
 
     if len(led_coords) != 4:
@@ -100,7 +102,6 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
     # iterate over frames
     start = time.time()
-    vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
     for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
