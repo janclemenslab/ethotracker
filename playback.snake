@@ -40,7 +40,7 @@ rule track:
     output: "/scratch/clemens10/playback/dat/{directory}/{videofile}.h5"
     params:
         logfile="/scratch/clemens10/playback/dat/{directory}/{videofile}_track.log",
-    shell: "python3 -m tracker.FlyPursuit {input.video} --nflies 1 -p playback -t 0.2 -s10000 --led_coords 0 -o" # force automatic detection of led corner
+    shell: "python3 -m tracker.pursuit {input.video} --nflies 1 -p playback -t 0.2 -s10000 --led_coords 0 -o" # force automatic detection of led corner
 
 rule postprocess:
     input:
