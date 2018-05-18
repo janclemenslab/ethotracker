@@ -14,7 +14,8 @@ videofiles.sort()
 print(videofiles)
 
 # build and execute command
-for filename in videofiles[-20:]:
+for filename in videofiles[-16:]:
+    print(filename)
     try:
         basename = os.path.splitext(os.path.basename(filename))[0]
         basepath = os.path.splitext(filename)[0]
@@ -32,13 +33,14 @@ for filename in videofiles[-20:]:
         # os.system(cmd_post)
         # print(f'cp {basepath}.h5 {resdir}')
         # os.system(f'cp {basepath}.h5 {resdir}')
-        commands = [f"ffmpeg -i {filename} -vcodec copy {filename}.bak",  # Vcopy to new file
-               f"mv {filename}.bak {filename}",  # overwrite old file with new file
-               ]
+        commands = [f"cp {filename} {filename}.bak",  # copy to backup file
+                    f"ffmpeg -i {filename}.bak -vcodec copy {filename}",  # Vcopy to new file
+                    f"rm {filename}.bak",  # delete backup file
+                    ]
 
         for cmd in commands:
             print(cmd)
-            # os.system(cmd)
+            os.system(cmd)
 
     except (KeyboardInterrupt, SystemExit):
         raise
