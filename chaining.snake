@@ -9,6 +9,7 @@ files = [file for directory, file in zip(directories, files) if not file.startsw
 trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
 mtffiles = expand("/scratch/clemens10/chaining/res/{directory}_mtf.h5", zip, directory=directories, file=files)
+trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}_track.avi, zip, directory=directories, file=files)
 
 rule all:
     input: trkfiles, spdfiles
@@ -17,6 +18,9 @@ rule post:
     input: spdfiles
 
 rule motifs:
+    input: mtffiles
+
+rule trackmovies:
     input: mtffiles
 
 rule track:
@@ -37,8 +41,8 @@ rule postprocess:
        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_post.log",
    output: "/scratch/clemens10/chaining/res/{directory}_spd.h5",
    run:
-    shell("python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}")
-    shell("cp -vf {input.tracks} /scratch/clemens10/chaining/res/")
+       shell("python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output}")
+       shell("cp -vf {input.tracks} /scratch/clemens10/chaining/res/")
 
 rule networkmotifs:
    input:
@@ -47,3 +51,5 @@ rule networkmotifs:
        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
    output: "/scratch/clemens10/chaining/res/{directory}_mtf.h5",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output} --networkmotifs"
+
+rule trackmovies:

@@ -28,7 +28,7 @@ print(filename)
 vr = VideoReader(filename)
 
 # load tracker results
-root = '/Volumes/ukme04/#Common/chaining/res'
+root = '/scratch/clemens10/chaining/res'#'/Volumes/ukme04/#Common/chaining/res'
 filename = os.path.join(root, recname + '_spd.h5')
 # filename = os.path.join(root, recname + '.h5')
 with h5py.File(filename, 'r') as r:
@@ -53,8 +53,7 @@ frame_size = tuple(np.uint(16 * np.floor(np.array(vr[0].shape[0:2], dtype=np.dou
 # logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
 print(filename[0:-4] + "tracks.avi")
 
-vw = cv2.VideoWriter(filename[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
-                     fps=vr.frame_rate, frameSize=frame_size)
+vw = cv2.VideoWriter(filename[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'MPEG'), fps=vr.frame_rate, frameSize=frame_size)
 
 chamber_number = 0
 fly = 1
