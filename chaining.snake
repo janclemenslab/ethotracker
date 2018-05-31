@@ -9,7 +9,7 @@ files = [file for directory, file in zip(directories, files) if not file.startsw
 trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/chaining/res/{directory}_spd.h5", zip, directory=directories, file=files)
 mtffiles = expand("/scratch/clemens10/chaining/res/{directory}_mtf.h5", zip, directory=directories, file=files)
-trkfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}_track.avi, zip, directory=directories, file=files)
+trmfiles = expand("/scratch/clemens10/chaining/dat/{directory}/{file}_track.avi", zip, directory=directories, file=files)
 
 rule all:
     input: trkfiles, spdfiles
@@ -21,7 +21,7 @@ rule motifs:
     input: mtffiles
 
 rule trackmovies:
-    input: mtffiles
+    input: trmfiles
 
 rule track:
     input:
@@ -52,4 +52,11 @@ rule networkmotifs:
    output: "/scratch/clemens10/chaining/res/{directory}_mtf.h5",
    shell: "python3 ~/analysis/scripts/postprocessing_chaining.py {input.tracks} {output} --networkmotifs"
 
-rule trackmovies:
+rule write_trackmovies:
+    input:
+        video="/scratch/clemens10/chaining/dat/{directory}/{videofile}.avi",
+    params:
+        runtime="8:00",
+        logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_trackmovies.log",
+    output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.avi",
+    shell: "python3 test/write_trackmovies.py {input.video}"
