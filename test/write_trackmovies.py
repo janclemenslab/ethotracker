@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import cv2
 from videoreader import VideoReader
 import tracker.foreground as fg
@@ -45,7 +44,6 @@ bounding_box = chamber_bounding_box[chamber_number+1]
 frame_number = 10000  # 77850#16500
 frame_offset = 0  # -120
 frame_step = 1
-plt.gcf().set_size_inches(20, 20)
 vr.read(frame_offset)
 
 
@@ -72,10 +70,5 @@ while frame_number < 340000:
                                     lines=tl)
     # fg.show(frame_with_tracks)
     vw.write(np.uint8(frame_with_tracks*255))
-
-    # plt.cla()
-    # plt.imshow(frame_with_tracks)
-    # plt.title(frame_number)
-    # plt.pause(0.000001)
 
 vw.release()
