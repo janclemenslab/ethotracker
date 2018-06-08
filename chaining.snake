@@ -60,3 +60,13 @@ rule write_trackmovies:
         logfile="/scratch/clemens10/chaining/dat/{directory}/{videofile}_trackmovies.log",
     output: "/scratch/clemens10/chaining/dat/{directory}/{videofile}_track.avi",
     shell: "python3 test/write_trackmovies.py {input.video}"
+
+rule get_angles:
+    input:
+        tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
+    params:
+        logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
+        modelfile="/scratch/clemens10/chaining/modelrun_2018-06-05_11-07/model_2018-06-05_11-07",
+        videofile="/scratch/clemens10/chaining/dat/{directory}/{directory}.avi",
+    output: "/scratch/clemens10/chaining/res/{directory}_angles.h5",
+    shell: "python3 ~/analysis/scripts/keras_fix_angles.py {videofile} {input.tracks} {output} {modelfile}"
