@@ -73,4 +73,4 @@ rule get_angles:
         modelfile="/scratch/clemens10/chaining/modelrun_2018-06-05_11-07/model_2018-06-05_11-07",
         videofile="/scratch/clemens10/chaining/dat/{directory}/{directory}.avi",
     output: "/scratch/clemens10/chaining/res/{directory}_angles.h5",
-    shell: "python3 ~/analysis/scripts/keras_fix_angles.py {videofile} {input.tracks} {output} {modelfile}"
+    shell: "python3 ~/analysis/scripts/keras_fix_angles.py {params.videofile} {input.tracks} {output} {params.modelfile}"
