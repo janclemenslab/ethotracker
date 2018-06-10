@@ -69,6 +69,8 @@ rule get_angles:
     input:
         tracks="/scratch/clemens10/chaining/dat/{directory}/{directory}.h5",
     params:
+        runtime="24:00",
+        # queue="gpu",
         logfile="/scratch/clemens10/chaining/dat/{directory}/{directory}_motif.log",
         modelfile="/scratch/clemens10/chaining/modelrun_2018-06-05_11-07/model_2018-06-05_11-07",
         videofile="/scratch/clemens10/chaining/dat/{directory}/{directory}.avi",
