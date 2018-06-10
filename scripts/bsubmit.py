@@ -19,11 +19,12 @@ sm_tmpdir, sm_jobid = mo.groups()
 props = read_job_properties(jobscript)
 
 # set up job name, project name
-jobname = f"{props["rule"]}-{sm_jobid}"
+rule = props["rule"]
 if props["params"].get("logid"):
-    rule = props["rule"]
-    logid = props["params"]["logid"]
-    jobname = f"{rule}-{logid}"
+    logid = props["params"]["logid
+else:
+    logid = sm_jobid
+jobname = f"{rule}-{logid}"
 
 if props["params"].get("runtime"):
     runtime = props["params"].get("runtime")
