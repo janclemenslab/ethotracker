@@ -21,7 +21,7 @@ props = read_job_properties(jobscript)
 # set up job name, project name
 rule = props["rule"]
 if props["params"].get("logid"):
-    logid = props["params"]["logid
+    logid = props["params"]["logid"]
 else:
     logid = sm_jobid
 jobname = f"{rule}-{logid}"
