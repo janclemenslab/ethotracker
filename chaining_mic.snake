@@ -6,7 +6,7 @@ directories = [directory for directory, file in zip(directories, files) if not f
 files = [file for directory, file in zip(directories, files) if not file.startswith('.')]
 
 # generate inputs and outputs from listing
-trkfiles = expand("/scratch/clemens10/chainingmic/dat/{directory}/{file}.h5", zip, directory=directories, file=files)
+trkfiles = expand("/scratch/clemens10/chainingmic/dat/{directory}/{file}_tracks.h5", zip, directory=directories, file=files)
 spdfiles = expand("/scratch/clemens10/chainingmic/res/{directory}_spd.h5", zip, directory=directories, file=files)
 mtffiles = expand("/scratch/clemens10/chainingmic/res/{directory}_mtf.h5", zip, directory=directories, file=files)
 angfiles = expand("/scratch/clemens10/chainingmic/res/{directory}_angles.h5", zip, directory=directories, file=files)
@@ -33,12 +33,12 @@ rule track:
     params:
         runtime="48:00",
         logfile="/scratch/clemens10/chainingmic/dat/{directory}/{videofile}_track.log",
-    output: "/scratch/clemens10/chainingmic/dat/{directory}/{videofile}.h5",
+    output: "/scratch/clemens10/chainingmic/dat/{directory}/{videofile}_tracks.h5",
     shell: "python3 -m tracker.pursuit {input.video} -p chaining_hires -t 0.3" # force automatic detection of led corner
 
 rule postprocess:
    input:
-       tracks="/scratch/clemens10/chainingmic/dat/{directory}/{directory}.h5",
+       tracks="/scratch/clemens10/chainingmic/dat/{directory}/{directory}_tracks.h5",
    params:
        snd_logs="/scratch/clemens10/chainingmic/dat/{directory}/{directory}_snd.log",
        logfile="/scratch/clemens10/chainingmic/dat/{directory}/{directory}_post.log",

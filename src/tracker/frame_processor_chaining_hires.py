@@ -121,7 +121,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annot
     res.frame_error_codes = None  # should be dictionary mapping error codes to messages
     # save initialized results object
     res.status = "initialized"
-    res.save(file_name[0:-4] + '.h5')  # FIXME: should save to 'videofile_tracks.h5'
+    res.save(file_name[0:-4] + '_tracks.h5')
     logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
 

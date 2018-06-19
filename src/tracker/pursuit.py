@@ -153,7 +153,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
     # save results and clean up
     logging.info("finished processing frames - saving results")
     res.status = "done"
-    res.save(file_name[0:-4] + '.h5')
+    res.save(file_name[0:-4] + '_tracks.h5')
     logging.info("             done.")
     return 1
 
