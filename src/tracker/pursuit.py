@@ -56,12 +56,16 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         from tracker.frame_processor_chaining import Prc, init
     elif processor == 'playback':
         from tracker.frame_processor_playback import Prc, init
+    elif processor == 'chaining_hires':
+        from tracker.frame_processor_chaining_hires import Prc, init
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
 
     logging.info(f'processing {file_name}')
     vr = VideoReader(file_name)
 
+    # __________ THIS SHOULD BE FACTORED OUT  _________________
+    # also, fix the whole start_frame vs res.frame_count issue
     if not override:
         try:  # attempt resume from intermediate results
             res = AttrDict().load(filename=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
@@ -85,8 +89,9 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         res = init(vr, start_frame, threshold, nflies, file_name, )
         logging.info('done initializing')
         vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
+    # ___________________________
 
-
+    # this should happen in frame processor for playback - not needed for chaining since we annotate
     if len(led_coords) != 4:
         led_coords = fg.detect_led(vr[res.start_frame])
 
@@ -112,6 +117,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             # get annotated frame if necessary
             if save_video or (display is not None and res.frame_count % display == 0):
                 frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
+                # frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
             if display is not None and res.frame_count % display == 0:
@@ -160,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--threshold', type=float, default=0.4, help='threshold for foreground detection, defaults to 0.3')
     parser.add_argument('-s', '--start_frame', type=int, default=None, help='first frame to track, defaults to 0')
     parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
-    parser.add_argument('-p', '--processor', type=str, choices=['chaining', 'playback'], default='chaining', help='class to process frames')
+    parser.add_argument('-p', '--processor', type=str, choices=['chaining', 'playback', 'chaining_hires'], default='chaining', help='class to process frames')
     parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
     parser.add_argument('--save_video', action='store_true', help='save annotated vid with tracks')
     parser.add_argument('--led_coords', nargs='+', type=int, default=[10, 550, 100, -1], help='should be a sequence of 4 values OTHERWISE will autodetect')
