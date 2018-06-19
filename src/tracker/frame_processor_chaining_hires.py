@@ -13,7 +13,7 @@ import tracker.tracker as tk
 from tracker.background import BackGroundMax, BackGroundMean, BackGroundMedian
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
-plt.ion()
+# plt.ion()
 
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annotationfilename=None):
@@ -227,14 +227,14 @@ class Prc():
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
 
-                                plt.subplot(121)
-                                plt.cla()
-                                plt.imshow(con_frame)
-                                plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
-                                plt.subplot(122)
-                                plt.imshow(ll)
-                                plt.show()
-                                plt.pause(0.00001)
+                                # plt.subplot(121)
+                                # plt.cla()
+                                # plt.imshow(con_frame)
+                                # plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
+                                # plt.subplot(122)
+                                # plt.imshow(ll)
+                                # plt.show()
+                                # plt.pause(0.00001)
 
                                 con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
                                 # only keep foreground points/labels
