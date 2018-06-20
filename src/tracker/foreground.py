@@ -78,8 +78,12 @@ def segment_connected_components(frame, minimal_size=None):
     if minimal_size is not None:
         size = sci.labeled_comprehension(frame, labeled_frame, range(1, nlbl + 1), np.alen,
                                          out_dtype=np.uint, default=0, pass_positions=False)
-        for lbl in np.where(size < minimal_size):
-            labeled_frame[labeled_frame==lbl+1] = 0  # remove
+
+        # import ipdb; ipdb.set_trace()
+        too_small = np.where(size < minimal_size)
+        if np.any(too_small):
+            for lbl in too_small:
+                labeled_frame[labeled_frame==lbl+1] = 0  # remove
         tmp = labeled_frame.copy()
         for cnt, lbl in enumerate(np.unique(labeled_frame)):
             tmp[labeled_frame==lbl] = cnt
@@ -130,9 +134,9 @@ def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100
     return centers, labels, points
 
 
-def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initial_means=None):
+def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initial_means=None, n_samples=1000):
     """Cluster by fitting GMM."""
-    points = samplepoints(frame)
+    points = samplepoints(frame, n_samples)
     em = cv2.ml.EM_create()
     em.setClustersNumber(num_clusters)
     em.setCovarianceMatrixType(em_cov)
@@ -140,6 +144,8 @@ def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initia
         em.trainEM(points)
     else:
         em.trainE(points, means0=initial_means)
+        _, probs = em.predict(points)
+        em.trainM(points, probs)
     centers = em.getMeans()
     _, probs = em.predict(points)
     labels = np.argmax(probs, axis=1)
@@ -364,9 +370,14 @@ def get_bounding_box(labeled_frame):
 def annotate(frame, centers=None, lines=None):
     """annotate frame"""
     if centers is not None or lines is not None:
-        colors = np.zeros((1, centers.shape[0], 3), np.uint8)
+        try:
+            nflies = centers.shape[0]
+        except Exception as e:
+            nflies = lines.shape[0]
+
+        colors = np.zeros((1, nflies, 3), np.uint8)
         colors[0, :] = 220
-        colors[0, :, 0] = np.arange(0, 180, 180.0/centers.shape[0])
+        colors[0, :, 0] = np.arange(0, 180, 180.0/nflies)
         colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0].astype(np.float32) / 255.0
         colors = [list(map(float, thisColor)) for thisColor in colors]
 
