@@ -113,7 +113,6 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         try:
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, led_coords))
-
             # get annotated frame if necessary
             if save_video or (display is not None and res.frame_count % display == 0):
                 frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
@@ -133,7 +132,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
             if res.frame_count % save_interval == 0:
                 res.status = "progress"
-                res.save(file_name[0:-4] + '.h5')
+                res.save(file_name[0:-4] + '_tracks.h5')
                 logging.info("    saving intermediate results")
         except KeyboardInterrupt:
             raise

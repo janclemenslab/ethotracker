@@ -3,6 +3,10 @@ import cv2
 import os
 import yaml
 import logging
+import deepdish as dd
+import xarray as xr
+import pandas as pd
+from itertools import product
 
 import tracker.foreground as fg
 import tracker.tracker as tk
@@ -12,7 +16,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, annotationfilename=None):
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
     # TODO:
     #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
     #  provide these as args, if no chamber mask and box use full frame
@@ -23,24 +27,25 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     res = AttrDict()
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
+    import ipdb; ipdb.set_trace()
     res.background = bg.background[:, :, 0]
 
     # load annotation filename
     annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
-    with open(annotationfilename, 'r') as stream:
-        ann = yaml.load(stream)
+    with open(annotationfilename, 'r') as f:
+        ann = yaml.load(f)
 
     # LED mask
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
-    res.led_coords = fg.get_bounding_box(res.led_mask)  # get bounding boxes of remaining chambers
+    res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
     # chambers mask
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.chambers = cv2.circle(res.chambers, (int(ann['centerX']), int(ann['centerY'])), int(ann['radius']+10), color=[1, 1, 1], thickness=-1)
 
     # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
-    # FIXME: no need to pre-pend background anymore
+    # FIXME: no need to pre-pend background anymore?
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
     res.centers_initial = ann['flypositions']
@@ -50,19 +55,72 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=1000, anno
     res.file_name = file_name
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
-    res.number_of_frames = int(vr.number_of_frames)
+    res.nframes = len(vr)
+    # try:
+    #     timestamps_file = os.path.splitext(res.file_name)[0] + '_timestamps.h5'
+    #     timestamps = dd.io.load(timestamps_file, '/timestamps')
+    # except OSError as e:
+    #     logging.error(e)
+    #     logging.warning('setting time stamps None.')
+    #     timestamps = None
+    # # time stamps should start at 0 and have reference time stamps for start time
+    # # FIXME: time stamps should be proper datetime64 or timedelta64 as in http://xarray.pydata.org/en/stable/time-series.html
+    # res.timestamps_ref = 0#timestamps[0]
+    # res.timestamps = np.zeros((res.nframes+1000,))#timestamps - res.timestamps_ref
+    # # TODO: this could also include sex, genotype etc. so we can directly select
+    # chamber_fly = pd.MultiIndex.from_product([range(res.nchambers), range(res.nflies), ['unknown'], ['NM91']],
+    #                                          names=('chamber', 'individual', 'sex', 'genotype'))
+    #
+    # pos_head = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
+    #                         attrs={'units': 'pixels'},
+    #                         dims=['time', 'fly', 'coordinate']
+    #                         )
+    # pos_tail = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
+    #                         attrs={'units': 'pixels'},
+    #                         dims=['time', 'fly', 'coordinate']
+    #                         )
+    # pos_center = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
+    #                           attrs={'units': 'pixels'},
+    #                           dims=['time', 'fly',  'coordinate']
+    #                           )
+    # flyarea = xr.DataArray(data=np.zeros((res.nframes + 1000, res.nchambers*res.nflies), dtype=np.float16),
+    #                        attrs={'units': 'pixels'},
+    #                        dims=['time', 'fly'],
+    #                        )
+    # led = xr.DataArray(data=np.zeros((res.nframes + 1000,), dtype=np.float16),
+    #                    attrs={'units': None, 'mask': res.led_mask, 'bounding_box': res.led_mask},
+    #                    dims=['time'],
+    #                    )
+    # frame_errors = xr.DataArray(data=np.zeros((res.nframes + 1000, res.nchambers, ), dtype=np.uint8),
+    #                             attrs={'units': None, 'errorcodes': None},
+    #                             dims=['time', 'chamber'],
+    #                             )
+    # tracks = xr.Dataset(data_vars={'flyarea': flyarea, 'led': led, 'frameerrors': frame_errors,
+    #                                    'head': pos_head, 'center': pos_center, 'tail': pos_tail},
+    #                     attrs={'filename': 'test.h5', 'machine': 'localhost', 'user': 'icke', 'date': '20170203',
+    #                            'background': res.background,
+    #                            'threshold': res.threshold,
+    #                            'chambers': res.chambers, 'chambers_bounding_box': res.chambers_bounding_box,
+    #                            },
+    #                     coords={'time': res.timestamps, 'reference_time': res.timestamps_ref,
+    #                             'fly': chamber_fly,
+    #                             'coordinate': ['x', 'y'],
+    #                             },
+    #                     )
+    # # res.center[res.start_frame, ...] = ann['flypositions']  # FIXME: annotated fly positions should match chambers
+    # print(tracks)
+    # dd.io.save('test.h5', tracks)
 
-    res.centers = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
+    res.centers = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.centers[res.frame_count, 0, :, :] = res.centers_initial
-    res.area = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies), dtype=np.float16)
-    res.lines = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
-    res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
-    res.quality = np.zeros((res.number_of_frames + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
-    res.frame_error = np.zeros((res.number_of_frames + 1000, res.nchambers, 1), dtype=np.uint8)
+    res.lines = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
+    res.led = np.zeros((res.nframes + 1000, res.nflies, 1), dtype=np.float16)
+    # res.quality = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
+    res.frame_error = np.zeros((res.nframes + 1000, res.nchambers, 1), dtype=np.uint8)
     res.frame_error_codes = None  # should be dictionary mapping error codes to messages
     # save initialized results object
     res.status = "initialized"
-    res.save(file_name[0:-4] + '.h5')
+    res.save(file_name[0:-4] + '_tracks.h5')
     logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
 
@@ -86,8 +144,6 @@ class Prc():
         old_lines = None
 
         frame_error = np.zeros((res.nchambers, 1), dtype=np.uint8)
-
-        area = np.zeros((1, res.nchambers, res.nflies))
 
         # get list of chamber numbers and remove background "chamber"
         uni_chambers = np.unique(res.chambers).astype(np.int)
@@ -115,8 +171,7 @@ class Prc():
                     logging.info(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
-                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(
-                                                                                            foreground_cropped, minimal_size=5)
+                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=5)
                     # assigning flies to conn comps
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
@@ -154,28 +209,35 @@ class Prc():
                                 # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
                                 fly_area = 150
+                                thres = 0.2
                                 while np.sum(con_frame_thres) > flycnt[con]*fly_area:  # shouldn't we use a con_frame_thres with outside flies masked out???
                                     thres += 0.01  # increment thres as long as there are too many foreground pixels for the number of flies
                                     con_frame_thres = (-con_frame+255) > thres*255
-                                con_frame_thres = fg.erode(con_frame_thres, 3)
+                                # con_frame_thres = fg.erode(con_frame_thres, 3)
                                 # 4a. locally adaptive threshold finds gaps between flies
                                 ada = cv2.adaptiveThreshold((-con_frame+255).astype(np.uint8), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, 1)
                                 con_frame_thres[ada == 0] = 0
-
+                                con_frame_thres = fg.erode(con_frame_thres, 3)
                                 # mask out adjacent flies/patches
                                 con_frame[con_frame_mask] = 0
+
+                                # DEFINITELY check area of individual flies...
+
 
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
 
-                                # plt.subplot(121)
-                                # plt.cla()
-                                # plt.imshow(con_frame)
-                                # plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
-                                # plt.subplot(122)
-                                # plt.imshow(ll)
-                                # plt.show()
-                                # plt.pause(0.00001)
+                                if flycnt[con]>2:
+                                    cm = plt.get_cmap('tab10', res.nflies).colors
+                                    plt.subplot(121)
+                                    plt.cla()
+                                    plt.imshow(con_frame, cmap='gray')
+                                    plt.scatter(marker_positions[:,1], marker_positions[:,0], s=8, c=cm)
+
+                                    plt.subplot(122)
+                                    plt.imshow(ll, cmap='tab10')
+                                    plt.show()
+                                    plt.pause(0.00001)
 
                                 con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
                                 # only keep foreground points/labels
@@ -229,13 +291,16 @@ class Prc():
                 if old_lines is not None and points.shape[0] > 0:   # check that we have not lost all flies in the current frame
                         for label in np.unique(labels):
                             lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
+                # # detect jumps
+                # if old_centers is not None:
+                #     distance_moved = np.sqrt(np.sum((centers - old_centers)**2, axis=2))
+                #     print(distance_moved)
 
             old_centers = np.copy(centers)  # remember
             old_lines = np.copy(lines)  # remember
 
-            res.centers[res.frame_count, :, :, :] = centers
-            res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
-            res.frame_error[res.frame_count, :, :] = frame_error
-            res.area[res.frame_count, :] = 0
+            res.centers[res.frame_count, ...] = centers
+            res.lines[res.frame_count, ...] = lines
+            res.frame_error[res.frame_count, ...] = frame_error
 
             yield res, foreground

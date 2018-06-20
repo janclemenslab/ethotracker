@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 # plt.ion()
 
 
-def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annotationfilename=None):
+def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
     # TODO:
     #  refactor - tracker needs: background, chamber mask, chmaber bounding box (for slicing)
     #  provide these as args, if no chamber mask and box use full frame
@@ -30,14 +30,14 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annot
     res.background = bg.background[:, :, 0]
 
     # load annotation filename
-    # annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
-    # with open(annotationfilename, 'r') as f:
-    #     ann = yaml.load(f)
+    annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
+    with open(annotationfilename, 'r') as f:
+     ann = yaml.load(f)
 
     # LED mask
-    res.led_coords = fg.detect_led(bg.background)
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.led_mask[:80, :80] = 1
+    res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
+    res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
     # chambers mask
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     chamber_center = np.uintp(np.array(res.background.shape)/2)-2
@@ -49,9 +49,9 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annot
     # FIXME: no need to pre-pend background anymore?
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
 
-    res.centers_initial = []#ann['flypositions']
+    res.centers_initial = ann['flypositions']
     # init Results structure
-    res.nflies = 8#int(ann['nFlies'])
+    res.nflies = int(ann['nFlies'])
     res.nchambers = int(np.max(res.chambers))
     res.file_name = file_name
     res.start_frame = int(start_frame)
@@ -113,7 +113,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=500, annot
     # dd.io.save('test.h5', tracks)
 
     res.centers = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
-    # res.centers[res.frame_count, 0, :, :] = res.centers_initial
+    res.centers[res.frame_count, 0, :, :] = res.centers_initial
     res.lines = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
     res.led = np.zeros((res.nframes + 1000, res.nflies, 1), dtype=np.float16)
     # res.quality = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
