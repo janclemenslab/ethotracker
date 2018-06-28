@@ -5,8 +5,8 @@ export OMP_NUM_THREADS=1
 export OPENBLAS_MAIN_FREE=1
 
 SCRIPTDIR="/usr/users/clemens10/analysis/scripts"
-DATADIR="/scratch/clemens10/playback/"
-LOGDIR="/scratch/clemens10/playback/log"
+DATADIR="/scratch/clemens10/"
+LOGDIR="/scratch/clemens10/log"
 snakemake --timestamp --rerun-incomplete --keep-going --nolock --notemp \
     --jobs 999 \
     --directory . \
