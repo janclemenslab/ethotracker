@@ -55,9 +55,9 @@ class ProcessorType(Enum):
     chaining_hires = 'chaining_hires'
 
 
-def run(file_name, *, nflies=1, display=0, threshold=0.4, start_frame=None, override=False, processor='chaining',
-        init_only=False, write_video=False, led_coords=[10, 550, 100, -1], interval_save=1000):
-    """multi-animal tracker
+def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4, start_frame:int=None, override:bool=False, processor='chaining',
+        init_only=False, write_video=False, led_coords=[10, 550, 100, -1], interval_save=1000) -> int:
+    """Multi-animal tracker
 
     Args:
       file_name(str): video file to process
@@ -71,16 +71,17 @@ def run(file_name, *, nflies=1, display=0, threshold=0.4, start_frame=None, over
       write_video(bool): save annotated vid with tracks
       led_coords(list[int]): should be a sequence of 4 values OTHERWISE will autodetect'
       interval_save(int): save intermediate resultse very nth frame
+
+    Returns:
+      exitcode
     """
 
-    logging.info('Tracking {0} flies in {1}.'.format(nflies, file_name))
-
     """Track movie."""
-    if processor == 'chaining':
+    if processor.value == 'chaining':
         from tracker.frame_processor_chaining import Prc, init
-    elif processor == 'playback':
+    elif processor.value == 'playback':
         from tracker.frame_processor_playback import Prc, init
-    elif processor == 'chaining_hires':
+    elif processor.value == 'chaining_hires':
         from tracker.frame_processor_chaining_hires import Prc, init
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
@@ -106,6 +107,7 @@ def run(file_name, *, nflies=1, display=0, threshold=0.4, start_frame=None, over
             res_loaded = False
             pass
 
+
     if override or not res_loaded:  # re-initialize tracker
         if start_frame is None:
             start_frame = 0
@@ -113,7 +115,8 @@ def run(file_name, *, nflies=1, display=0, threshold=0.4, start_frame=None, over
         res = init(vr, start_frame, threshold, nflies, file_name, )
         logging.info('done initializing')
         vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
-    # ___________________________
+
+    logging.info('Tracking {0} flies in {1}.'.format(res.nflies, file_name))
 
     # this should happen in frame processor for playback - not needed for chaining since we annotate
     if len(led_coords) != 4:
