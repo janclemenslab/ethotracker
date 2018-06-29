@@ -125,8 +125,8 @@ def findFliesCallback(event, x, y, flags, param):
     global nFlies, fly1CenterX, fly1CenterY, fly2CenterX, fly2CenterY
 
     if event == cv2.EVENT_LBUTTONUP:
-        nFlies = nFlies + 1
-        print('nFlies = ' + str(nFlies))
+        nFlies += 1
+        print(f'fly {nFlies} = ({x}, {y})')
         updateCenterImage(x, y)
         flyCenters[nFlies - 1, 0] = x
         flyCenters[nFlies - 1, 1] = y
@@ -235,7 +235,10 @@ else:
     movieName = filedialog.askopenfilename()
 print(movieName)
 # startFrame = getStartTime(movieName[0:(movieName.rindex('/')+1)])
-startFrame = getStartTime(os.path.dirname(movieName))
+if len(sys.argv) > 2:
+    startFrame = int(sys.argv[2])
+else:
+    startFrame = 1000#getStartTime(os.path.dirname(movieName))
 
 vr = cv2.VideoCapture(movieName, cv2.CAP_FFMPEG)
 # v = cv2.VideoCapture('/data/out', cv2.CAP_FFMPEG)
