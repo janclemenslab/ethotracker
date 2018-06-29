@@ -1,12 +1,13 @@
 """Track videos."""
 import cv2
-import argparse
 import time
 import sys
 import traceback
 import os
 import logging
 import numpy as np
+from enum import Enum
+import defopt
 
 from videoreader import VideoReader
 from attrdict import AttrDict
@@ -48,9 +49,32 @@ def display_frame(frame_with_tracks):
     plt.pause(0.0001)
 
 
-def run(file_name, override=False, init_only=False, display=None, save_video=False, nflies=1,
-        threshold=0.4, save_interval=1000, start_frame=None, led_coords=[10, 550, 100, -1],
-        processor='chaining'):
+class ProcessorType(Enum):
+    chaining = 'chaining'
+    playback = 'playback'
+    chaining_hires = 'chaining_hires'
+
+
+def run(file_name, *, nflies=1, display=0, threshold=0.4, start_frame=None, override=False, processor='chaining',
+        init_only=False, write_video=False, led_coords=[10, 550, 100, -1], interval_save=1000):
+    """multi-animal tracker
+
+    Args:
+      file_name(str): video file to process
+      nflies(int): number of flies in video
+      display(int): show every Nth frame (do not show anything if 0)
+      threshold(float): threshold for foreground detection, defaults to 0.4
+      start_frame(int): first frame to track, defaults to 0
+      override(bool): override existing initialization or intermediate results
+      processor(ProcessorType): class to process frames
+      init_only(bool): only initialize, do not track
+      write_video(bool): save annotated vid with tracks
+      led_coords(list[int]): should be a sequence of 4 values OTHERWISE will autodetect'
+      interval_save(int): save intermediate resultse very nth frame
+    """
+
+    logging.info('Tracking {0} flies in {1}.'.format(nflies, file_name))
+
     """Track movie."""
     if processor == 'chaining':
         from tracker.frame_processor_chaining import Prc, init
@@ -68,7 +92,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
     # also, fix the whole start_frame vs res.frame_count issue
     if not override:
         try:  # attempt resume from intermediate results
-            res = AttrDict().load(filename=os.path.normpath(file_name[:-4].replace('\\', '/') + '.h5'))
+            res = AttrDict().load(filename=os.path.normpath(file_name[:-4].replace('\\', '/') + '_tracks.h5'))
             res_loaded = True
             if start_frame is None:
                 start_frame = res.frame_count
@@ -78,7 +102,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         except KeyboardInterrupt:
             raise
         except Exception as e:  # if fails start from scratch
-            print(e)
+            logging.error(e)
             res_loaded = False
             pass
 
@@ -99,7 +123,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
         return
 
     res.threshold = threshold
-    if save_video:
+    if write_video:
         frame_size = tuple(np.uint(16 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 16)))
         logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
         vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
@@ -114,23 +138,23 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, led_coords))
             # get annotated frame if necessary
-            if save_video or (display is not None and res.frame_count % display == 0):
+            if write_video or (display and res.frame_count % display == 0):
                 frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
                 # frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
-            if display is not None and res.frame_count % display == 0:
+            if display and res.frame_count % display == 0:
                 display_frame(frame_with_tracks)
 
             # save annotated frame to video
-            if save_video:
+            if write_video:
                 vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
 
-            if res.frame_count % save_interval == 0:
+            if res.frame_count % interval_save == 0:
                 logging.info('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
                 start = time.time()
 
-            if res.frame_count % save_interval == 0:
+            if res.frame_count % interval_save == 0:
                 res.status = "progress"
                 res.save(file_name[0:-4] + '_tracks.h5')
                 logging.info("    saving intermediate results")
@@ -144,7 +168,7 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
             ee = e
             logging.error(ee)
             # clean up - will be called before
-            if save_video:
+            if write_video:
                 vw.release()
             del(vr)
             return -1
@@ -158,21 +182,5 @@ def run(file_name, override=False, init_only=False, display=None, save_video=Fal
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file_name', type=str, help='video file to process')
-    parser.add_argument('--nflies', type=int, default=1, help='number of flies in video')
-    parser.add_argument('-d', '--display', type=int, default=None, help='show every Nth frame')
-    parser.add_argument('-t', '--threshold', type=float, default=0.4, help='threshold for foreground detection, defaults to 0.3')
-    parser.add_argument('-s', '--start_frame', type=int, default=None, help='first frame to track, defaults to 0')
-    parser.add_argument('-o', '--override', action='store_true', help='override existing initialization or intermediate results')
-    parser.add_argument('-p', '--processor', type=str, choices=['chaining', 'playback', 'chaining_hires'], default='chaining', help='class to process frames')
-    parser.add_argument('--init_only', action='store_true', help='only initialize, do not track')
-    parser.add_argument('--save_video', action='store_true', help='save annotated vid with tracks')
-    parser.add_argument('--led_coords', nargs='+', type=int, default=[10, 550, 100, -1], help='should be a sequence of 4 values OTHERWISE will autodetect')
-    args = parser.parse_args()
-
     logging.basicConfig(level=logging.INFO)
-    logging.info('Tracking {0} flies in {1}.'.format(args.nflies, args.file_name))
-
-    run(args.file_name, init_only=args.init_only, override=args.override, display=args.display, save_video=args.save_video,
-        nflies=args.nflies, threshold=args.threshold, start_frame=args.start_frame, led_coords=args.led_coords, processor=args.processor)
+    defopt.run(run)
