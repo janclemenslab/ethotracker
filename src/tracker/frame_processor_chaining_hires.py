@@ -25,26 +25,25 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     #  background should be: matrix
 
     res = AttrDict()
-    bg = BackGroundMedian(vr)
+    bg = BackGroundMean(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
 
     # load annotation filename
     annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
     with open(annotationfilename, 'r') as f:
-     ann = yaml.load(f)
+        ann = yaml.load(f)
 
-    # LED mask
+    # LED mask and bounding box
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
-    res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
-    # chambers mask
+    res.led_coords = fg.get_bounding_box(res.led_mask)[1].ravel()  # bounding boxe for LED for cropping
+
+    # chambers mask and bounding box
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     chamber_center = np.uintp(np.array(res.background.shape)/2)-2
     chamber_radius = np.uintp(np.min(chamber_center)-6)
     res.chambers = cv2.circle(res.chambers, tuple(chamber_center), chamber_radius, color=[1, 1, 1], thickness=-1)
-
-    # chambers bounding box
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
     # FIXME: no need to pre-pend background anymore?
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
