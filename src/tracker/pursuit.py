@@ -146,7 +146,6 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4, start_fr
         try:
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
-            import ipdb; ipdb.set_trace()
             # get annotated frame if necessary
             if write_video or (display and res.frame_count % display == 0):
                 frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
