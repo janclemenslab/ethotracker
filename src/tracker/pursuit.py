@@ -119,7 +119,7 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4, start_fr
     logging.info('Tracking {0} flies in {1}.'.format(res.nflies, file_name))
 
     # this should happen in frame processor for playback - not needed for chaining since we annotate
-    if not res.led_coords:
+    if not hasattr(res, 'led_coords'):
         logging.info('no leed coords in res')
         if len(led_coords) == 4:
             logging.info('using coords provided in arg')
