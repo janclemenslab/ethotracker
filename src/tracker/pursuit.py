@@ -13,6 +13,7 @@ from videoreader import VideoReader
 from attrdict import AttrDict
 import tracker.foreground as fg
 
+cv2.setNumThreads(0)
 
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
@@ -46,7 +47,7 @@ def display_frame(frame_with_tracks):
         plt.axis('off')
     # plt.tight_layout()
     plt.show()
-    plt.pause(0.0001)
+    plt.pause(0.00001)
 
 
 class ProcessorType(Enum):
@@ -55,7 +56,8 @@ class ProcessorType(Enum):
     chaining_hires = 'chaining_hires'
 
 
-def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4, start_frame:int=None, override:bool=False, processor='chaining',
+def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
+        start_frame:int=None, override:bool=False, processor='chaining',
         init_only=False, write_video=False, led_coords=[], interval_save=1000) -> int:
     """Multi-animal tracker
 
@@ -148,8 +150,8 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4, start_fr
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
             # get annotated frame if necessary
             if write_video or (display and res.frame_count % display == 0):
-                frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
-                # frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
+                # frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
+                frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
             if display and res.frame_count % display == 0:

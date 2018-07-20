@@ -27,7 +27,6 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     res = AttrDict()
     bg = BackGroundMax(vr)
     bg.estimate(num_bg_frames, start_frame)
-    import ipdb; ipdb.set_trace()
     res.background = bg.background[:, :, 0]
 
     # load annotation filename
@@ -38,7 +37,8 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     # LED mask
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
-    res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
+    res.led_coords = fg.get_bounding_box(res.led_mask)[1].ravel()  # bounding boxe for LED for cropping
+    # res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
     # chambers mask
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.chambers = cv2.circle(res.chambers, (int(ann['centerX']), int(ann['centerY'])), int(ann['radius']+10), color=[1, 1, 1], thickness=-1)
@@ -227,17 +227,17 @@ class Prc():
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
 
-                                if flycnt[con]>2:
-                                    cm = plt.get_cmap('tab10', res.nflies).colors
-                                    plt.subplot(121)
-                                    plt.cla()
-                                    plt.imshow(con_frame, cmap='gray')
-                                    plt.scatter(marker_positions[:,1], marker_positions[:,0], s=8, c=cm)
+                                # if flycnt[con]>2:
+                                #     cm = plt.get_cmap('tab10', res.nflies).colors
+                                #     plt.subplot(121)
+                                #     plt.cla()
+                                #     plt.imshow(con_frame, cmap='gray')
+                                #     plt.scatter(marker_positions[:,1], marker_positions[:,0], s=8, c=cm)
 
-                                    plt.subplot(122)
-                                    plt.imshow(ll, cmap='tab10')
-                                    plt.show()
-                                    plt.pause(0.00001)
+                                #     plt.subplot(122)
+                                #     plt.imshow(ll, cmap='tab10')
+                                #     plt.show()
+                                #     plt.pause(0.00001)
 
                                 con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
                                 # only keep foreground points/labels

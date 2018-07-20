@@ -3,6 +3,7 @@ import cv2
 import scipy.ndimage as sci
 import skimage.segmentation
 
+cv2.setNumThreads(0)
 
 def circular_kernel(kernel_size=3):
     return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
@@ -394,7 +395,7 @@ def show(frame, window_name="frame", time_out=1, autoscale=False):
     """display frame"""
     if autoscale:
         if len(frame.shape) == 3:
-            maxval = np.max(np.max(frame, axis=0), axis=1)  # not tested
+            maxval = np.max(frame)  # not tested
             frame = frame / maxval
         else:
             frame = frame / np.max(frame)
