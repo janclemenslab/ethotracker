@@ -4,9 +4,6 @@ import cv2
 import argparse
 import os
 
-cv2.setNumThreads(0)
-
-
 
 class BackGround():
     """Calculate background as mean over frames - abstract base class.

@@ -33,6 +33,7 @@ class VideoReader:
 
     def __init__(self, filename):
         if not os.path.exists(filename):
+            print(f'{filename} not found.')
             raise FileNotFoundError
         self._filename = filename
         self._vr = cv2.VideoCapture()

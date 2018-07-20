@@ -13,7 +13,6 @@ from videoreader import VideoReader
 from attrdict import AttrDict
 import tracker.foreground as fg
 
-cv2.setNumThreads(0)
 
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
@@ -193,5 +192,6 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
 
 
 if __name__ == "__main__":
+     cv2.setNumThreads(0)
     logging.basicConfig(level=logging.INFO)
     defopt.run(run)
