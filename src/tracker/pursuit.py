@@ -118,9 +118,9 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
         vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
 
     logging.info('Tracking {0} flies in {1}.'.format(res.nflies, file_name))
-
+            
     # this should happen in frame processor for playback - not needed for chaining since we annotate
-    if not hasattr(res, 'led_coords'):
+    if not hasattr(res, 'led_coords') or res.led_coords is None:
         logging.info('no leed coords in res')
         if len(led_coords) == 4:
             logging.info('using coords provided in arg')
@@ -192,6 +192,6 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
 
 
 if __name__ == "__main__":
-     cv2.setNumThreads(0)
+    cv2.setNumThreads(0)
     logging.basicConfig(level=logging.INFO)
     defopt.run(run)

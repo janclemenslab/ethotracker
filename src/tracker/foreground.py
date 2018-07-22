@@ -293,11 +293,9 @@ def split_connected_components_watershed(flybins, flycnt, this_labels, labeled_f
     return centers, labels, points
 
 
-def detect_led(frame, channel=-1):
+def detect_led(frame, channel=-1, vsize=80, hsize=200):
     """Detect LED as darkest spot in channel(-1) in frame corner."""
     # vertical and horizontal size of corners
-    vsize = 80
-    hsize = 200
     v = frame.shape[0]
     h = frame.shape[1]
 
