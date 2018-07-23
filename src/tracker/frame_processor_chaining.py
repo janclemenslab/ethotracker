@@ -1,4 +1,5 @@
 import numpy as np
+import platform
 import cv2
 import os
 import yaml
@@ -13,6 +14,7 @@ import tracker.tracker as tk
 from tracker.background import BackGroundMax
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
+
 plt.ion()
 
 

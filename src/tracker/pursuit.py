@@ -1,12 +1,14 @@
 """Track videos."""
-import cv2
-import time
+import platform
 import sys
 import traceback
 import os
 import logging
-import numpy as np
+import time
 from enum import Enum
+
+import cv2
+import numpy as np
 import defopt
 
 from videoreader import VideoReader
@@ -192,6 +194,8 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
 
 
 if __name__ == "__main__":
-    cv2.setNumThreads(0)
+    if platform.system() is 'Linux':
+        logging.warning(f"Cluster job detected (system is {platform.system()}). Disabling threading in opencv2.")
+        cv2.setNumThreads(0)
     logging.basicConfig(level=logging.INFO)
     defopt.run(run)
