@@ -59,7 +59,7 @@ class ProcessorType(Enum):
 
 
 def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
-        start_frame: int=None, override: bool=False, processor: str='chaining',
+        start_frame: int=None, override: bool=False, processor='chaining',
         init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000) -> int:
     """Multi-animal tracker.
 
