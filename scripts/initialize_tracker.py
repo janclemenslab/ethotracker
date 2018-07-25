@@ -170,6 +170,7 @@ def convert(filename):
         annotation['rectCenterX'] = float(f.readline().split(',')[1].strip())
         annotation['rectCenterY'] = float(f.readline().split(',')[1].strip())
         annotation['rectRadius'] = float(f.readline().split(',')[1].strip())
+        annotation['start_frame'] = float(f.readline().split(',')[1].strip())
         annotation['angle'] = float(f.readline().split(',')[1].strip())
         data = f.read(1)
         flypos = []
@@ -354,6 +355,8 @@ with open(filename, 'w') as f:
     print('rectCenterY = ' + str(rectCenterY * scaling))
     f.write(f'rectRadius, {rectRadius * scaling}\n')
     print('rectRadius = ' + str(rectRadius * scaling))
+    f.write(f'start_frame, {startFrame}\n')
+    print('start_frame = ' + str(startFrame))
     f.write(f'angle, {angle}\n')
     print('angle = ' + str(angle))
     f.write(f'nFlies, {nFlies}\n')
