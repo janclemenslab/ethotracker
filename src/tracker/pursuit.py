@@ -57,10 +57,10 @@ class ProcessorType(Enum):
     chaining_hires = 'chaining_hires'
 
 
-def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
-        start_frame:int=None, override:bool=False, processor='chaining',
-        init_only=False, write_video=False, led_coords=[], interval_save=1000) -> int:
-    """Multi-animal tracker
+def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
+        start_frame: int=None, override: bool=False, processor: str='chaining',
+        init_only: bool=False, write_video: bool=False, led_coords: list[int]=[], interval_save: int=1000) -> int:
+    """Multi-animal tracker.
 
     Args:
       file_name(str): video file to process
@@ -77,8 +77,8 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
 
     Returns:
       exitcode
-    """
 
+    """
     """Track movie."""
     if processor.value == 'chaining':
         from tracker.frame_processor_chaining import Prc, init
@@ -110,7 +110,6 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
             res_loaded = False
             pass
 
-
     if override or not res_loaded:  # re-initialize tracker
         if start_frame is None:
             start_frame = 0
@@ -120,13 +119,13 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
         vr = VideoReader(file_name)  # for some reason need to re-intantiate here - otherwise returns None frames
 
     logging.info('Tracking {0} flies in {1}.'.format(res.nflies, file_name))
-            
+
     # this should happen in frame processor for playback - not needed for chaining since we annotate
     if not hasattr(res, 'led_coords') or res.led_coords is None:
         logging.info('no leed coords in res')
         if len(led_coords) == 4:
             logging.info('using coords provided in arg')
-            res.led_coords = leed_coords
+            res.led_coords = led_coords
         else:
             logging.info('and no leed coords provided as arg - auto detecting')
             res.led_coords = fg.detect_led(vr[res.start_frame])
@@ -151,8 +150,8 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
             # get annotated frame if necessary
             if write_video or (display and res.frame_count % display == 0):
-                # frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
-                frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
+                frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
+                # frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
             if display and res.frame_count % display == 0:
@@ -194,8 +193,8 @@ def run(file_name, *, nflies:int=1, display:int=0, threshold:float=0.4,
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     if platform.system() is 'Linux':
         logging.warning(f"Cluster job detected (system is {platform.system()}). Disabling threading in opencv2.")
         cv2.setNumThreads(0)
-    logging.basicConfig(level=logging.INFO)
     defopt.run(run)
