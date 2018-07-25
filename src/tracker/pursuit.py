@@ -6,6 +6,7 @@ import os
 import logging
 import time
 from enum import Enum
+from typing import List
 
 import cv2
 import numpy as np
@@ -59,7 +60,7 @@ class ProcessorType(Enum):
 
 def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
         start_frame: int=None, override: bool=False, processor: str='chaining',
-        init_only: bool=False, write_video: bool=False, led_coords: list[int]=[], interval_save: int=1000) -> int:
+        init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000) -> int:
     """Multi-animal tracker.
 
     Args:
