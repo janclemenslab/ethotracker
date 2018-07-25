@@ -6,14 +6,27 @@ import sys
 import peakutils
 from scipy import signal
 import os
+import logging
 
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
-        pos = f['centers'][:]
-        led = f['led'][:]
-        start_frame = f['start_frame'].value
-    pos = pos[start_frame + 1:-1000, :, :]
-    led = led[start_frame + 1:-1000, 0].T
+        if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
+            logging.info("deepdish file.")
+        else:            
+            pos = f['centers'][:]
+            led = f['led'][:]
+            start_frame = f['start_frame'].value
+            end_frame = f['frame_count'].value
+
+    import deepdish as dd
+    data = dd.io.load(file_name)
+    pos = data['centers']
+    led = data['led']
+    start_frame = data['start_frame']
+    end_frame = data['frame_count']
+
+    pos = pos[start_frame + 1:end_frame, :, :]
+    led = led[start_frame + 1:end_frame, 0].T
     nflies = pos.shape[1]
     return pos, led, nflies
 
