@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import argparse
 import os
-
+cv2.setNumThreads(1)
 
 class BackGround():
     """Calculate background as mean over frames - abstract base class.

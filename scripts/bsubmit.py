@@ -36,9 +36,15 @@ if props["params"].get("queue"):
 else:
     queue = "mpi"
 
+if props["params"].get("jobslots"):
+    jobslots = props["params"].get("jobslots")
+    jobslots = jobslots + " -R 'span[hosts=1]'"
+else:
+    jobslots = "1"
+
 # -E is a pre-exec command, that reschedules the job if the command fails
 #   in this case, if the data dir is unavailable (as may be the case for a hot-mounted file path)
-cmdline = f'bsub -J {jobname} -r -E "ls {DATADIR}" -W {runtime} -q {queue} '
+cmdline = f'bsub -J {jobname} -r -E "ls {DATADIR}" -W {runtime} -q {queue} -n {jobslots} '
 
 # log file output - "-oo" will overwrite existing log file, "-o" would append to existing file
 if props["params"].get("logfile"):

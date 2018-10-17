@@ -61,13 +61,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
 
 
 class Prc():
-    """Frame processor for tracking a frame.
-
-    Attributes:
-        likes_spam: A boolean indicating if we like SPAM or not.
-        eggs: An integer count of the eggs we have laid.
-
-    """
+    """Frame processor for tracking a frame."""
 
     def __init__(self, res):
         """Initialize and return a frame processor instance. Needs Results object."""
@@ -117,7 +111,6 @@ class Prc():
             foreground = fg.threshold(res.background - frame[:, :, res.frame_channel], res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
             foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
-            # import ipdb; ipdb.set_trace()
 
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
