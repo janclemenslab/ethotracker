@@ -9,7 +9,7 @@ export OMP_DYNAMIC="FALSE"
 SCRIPTDIR="/usr/users/clemens10/analysis/scripts"
 DATADIR="/scratch/clemens10/"
 LOGDIR="/scratch/clemens10/log"
-snakemake --timestamp --rerun-incomplete --keep-going --nolock --notemp \
+snakemake --rerun-incomplete --keep-going --nolock --notemp \
     --jobs 999 \
     --directory . \
     --jobscript "$SCRIPTDIR/jobscript.sh" \
