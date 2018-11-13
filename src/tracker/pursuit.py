@@ -56,6 +56,7 @@ class ProcessorType(Enum):
     chaining = 'chaining'
     playback = 'playback'
     chaining_hires = 'chaining_hires'
+    chaining_coarse = 'chaining_coarse'
 
 
 def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
@@ -87,6 +88,8 @@ def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
         from tracker.frame_processor_playback import Prc, init
     elif processor.value == 'chaining_hires':
         from tracker.frame_processor_chaining_hires import Prc, init
+    elif processor.value == 'chaining_coarse':
+        from tracker.frame_processor_chaining_coarse import Prc, init
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
 
@@ -151,8 +154,8 @@ def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
             # get annotated frame if necessary
             if write_video or (display and res.frame_count % display == 0):
-                frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
-                # frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
+                # frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
+                frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
             if display and res.frame_count % display == 0:
@@ -179,7 +182,7 @@ def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
             logging.error(repr(traceback.extract_tb(exc_traceback)))
             ee = e
             logging.error(ee)
-            # clean up - will be called before
+            # clean up
             if write_video:
                 vw.release()
             del(vr)
@@ -197,5 +200,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     if platform.system() is 'Linux':
         logging.warning(f"Cluster job detected (system is {platform.system()}). Disabling threading in opencv2.")
-        cv2.setNumThreads(0)
+        cv2.setNumThreads(1)
     defopt.run(run)
