@@ -17,6 +17,7 @@ from attrdict import AttrDict
 import tracker.foreground as fg
 cv2.setNumThreads(1)
 
+
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
     uni_chambers = np.unique(res.chambers).astype(np.int)
@@ -41,13 +42,12 @@ def display_frame(frame_with_tracks):
     """Display list of frames."""
     import matplotlib.pyplot as plt
     plt.ion()
-    plt.clf()
+    plt.figure(1)
     plt.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.99, wspace=0.01, hspace=0.01)
     for cnt, frame in enumerate(frame_with_tracks):
         plt.subplot(1, len(frame_with_tracks), cnt+1)
         plt.imshow(frame)
         plt.axis('off')
-    # plt.tight_layout()
     plt.show()
     plt.pause(0.00001)
 
