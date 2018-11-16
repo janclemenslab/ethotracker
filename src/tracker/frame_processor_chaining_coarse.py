@@ -110,7 +110,8 @@ class Prc():
             # import ipdb; ipdb.set_trace()
             res.frame_count = int(res.frame_count+1)
             foreground0 = np.abs(res.background - frame[:, :, 0])
-            foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
+            foreground = res.background - frame[:, :, 0]
+            foreground = fg.threshold(foreground, res.threshold * 255)
             foreground = fg.close(foreground, kernel_size=6)
             foreground = fg.erode(foreground, kernel_size=4)
             foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
@@ -159,7 +160,7 @@ class Prc():
                             else:  # only use additional watershed step when >2 flies in conn comp
                                 # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
-                                fly_area = 400
+                                fly_area = 600
                                 while np.sum(con_frame_thres) > flycnt[con]*fly_area:  # shouldn't we use a con_frame_thres with outside flies masked out???
                                     thres += 0.01  # increment thres as long as there are too many foreground pixels for the number of flies
                                     con_frame_thres = (-con_frame+255) > thres*255
@@ -174,6 +175,7 @@ class Prc():
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
 
+                                # plt.figure(999)
                                 # plt.subplot(121)
                                 # plt.cla()
                                 # plt.imshow(con_frame)
