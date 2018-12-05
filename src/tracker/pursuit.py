@@ -59,13 +59,14 @@ class ProcessorType(Enum):
     chaining_coarse = 'chaining_coarse'
 
 
-def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
+def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
         start_frame: int=None, override: bool=False, processor='chaining',
         init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000) -> int:
     """Multi-animal tracker.
 
     Args:
       file_name(str): video file to process
+      save_name(str): file to save results to
       nflies(int): number of flies in video
       display(int): show every Nth frame (do not show anything if 0)
       threshold(float): threshold for foreground detection, defaults to 0.4
@@ -100,7 +101,7 @@ def run(file_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
     # also, fix the whole start_frame vs res.frame_count issue
     if not override:
         try:  # attempt resume from intermediate results
-            res = AttrDict().load(filename=os.path.normpath(file_name[:-4].replace('\\', '/') + '_tracks.h5'))
+            res = AttrDict().load(save_name)
             res_loaded = True
             if start_frame is None:
                 start_frame = res.frame_count
