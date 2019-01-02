@@ -172,7 +172,7 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
             if res.frame_count % interval_save == 0:
                 res.status = "progress"
-                res.save(file_name[0:-4] + '_tracks.h5')
+                res.save(save_name)
                 logging.info("    saving intermediate results")
         except KeyboardInterrupt:
             raise
@@ -192,7 +192,7 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
     # save results and clean up
     logging.info("finished processing frames - saving results")
     res.status = "done"
-    res.save(file_name[0:-4] + '_tracks.h5')
+    res.save(save_name)
     logging.info("             done.")
     return 1
 
