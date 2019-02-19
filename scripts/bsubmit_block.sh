@@ -6,7 +6,7 @@ export OMP_NUM_THREADS=1
 export OPENBLAS_MAIN_FREE=1
 export MKL_DYNAMIC="FALSE"
 export OMP_DYNAMIC="FALSE"
-SCRIPTDIR="/usr/users/clemens10/analysis/scripts"
+SCRIPTDIR="$HOME/analysis/scripts"
 DATADIR="/scratch/clemens10/"
 LOGDIR="/scratch/clemens10/log"
 snakemake --rerun-incomplete --keep-going --nolock --notemp \
