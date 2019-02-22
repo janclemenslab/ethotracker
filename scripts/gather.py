@@ -29,27 +29,29 @@ def stats_by_group(data, grouping, fun):
 
 
 # load table from url
-url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCb0k0qztnvXZqn9iHsWhKBzceZJWq5Iz4MkGvpe0rHRNR5oTVhOLQ_9robQDE0Njh8G-UqTrbPxb9/pub?output=csv'
+url= 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQGO1qSnt8eJDQnRTKrX7lWzUjggcabhubrwLngQbf8Ssghd243lAXItTZCjjlH7vIHgYpw3VrEz-_V/pub?gid=0&single=true&output=csv'
+group_by_key = 'experiment group'
 data = pd.read_csv(url)
 
-playlists = list(set(data['analysis group']))  # get unique analysis groups
+playlists = list(set(data[group_by_key]))  # get unique analysis groups
 playlists = [p for p in playlists if p is not np.nan]  # filter out nan fields
-print('all playlists (analysis groups):')
+print(f'all playlists ("{group_by_key}"):')
 print(playlists)
 
-counts = [sum(playlists[ii] == data['analysis group']) for ii in range(len(playlists))]
+counts = [sum(playlists[ii] == data[group_by_key]) for ii in range(len(playlists))]
 # plt.bar(range(len(counts)), counts)
 # plt.axhline(10)
 # plt.xticks(range(-1, len(counts)), playlists, rotation=60)
 
 # now load all `*_spd.h5` files in 'res/' for this playlist
-dir_res = '/Users/janc/Dropbox/playback.new/res'
-dir_save = '/Users/janc/Dropbox/playback.new/tuningcurvedata'
+dir_res = '/Volumes/ukme04/#Common/playback/res'
+dir_save = '/Volumes/ukme04/#Common/playback/tuningcurvedata'
+# dir_save = '/Users/jclemens/Dropbox/playback.new/tuningcurvedata'
 
 # get all recordings for the first (non-nan) analysis group
-for playlist in playlists:
+for playlist in ['ipituneShortSoft_NM91_male', 'ipituneShortSoft_NM91_female']:# playlists:
     print('all recordings for {}:'.format(playlist))
-    all_recordings = data['filename'][playlist == data['analysis group']]
+    all_recordings = data['filename'][playlist == data[group_by_key]]
     # print(all_recordings)
 
     group_labels = np.zeros((0,))
@@ -61,7 +63,7 @@ for playlist in playlists:
     recording_name = []
     recording_id = []
     for idx, recording in enumerate(all_recordings):
-        results_file = '{0}/{1}_spd.h5'.format(dir_res, recording)
+        results_file = '{0}/{1}/{1}_spd.h5'.format(dir_res, recording)
         if os.path.exists(results_file):
             print(f'   loading {results_file}')
             with h5py.File(results_file, 'r') as f:
