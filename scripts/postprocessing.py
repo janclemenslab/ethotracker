@@ -12,7 +12,7 @@ def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
             logging.info("deepdish file.")
-        else:            
+        else:
             pos = f['centers'][:]
             led = f['led'][:]
             start_frame = f['start_frame'].value
@@ -41,9 +41,16 @@ def parse_prot(filename):
         if len(token) > 1:  # consider only rows that contain protocol logs
             ts, id, *data = token
             prot['timestamp'].append(ts)
-            prot_fields = data[0].split(';')
+            prot_fields = ''.join(data).split(';')
             for field in prot_fields[:-1]:
-                key, value = field.split(',')
+                splt = field.partition(',')
+                key = splt[0]
+                value = eval(splt[-1])
+                try:
+                    value = eval(value)
+                except:
+                    pass
+
                 prot[key].append(value)
     return prot
 
