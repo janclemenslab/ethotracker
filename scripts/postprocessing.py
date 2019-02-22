@@ -166,7 +166,8 @@ if __name__ == '__main__':
 
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
-            S = np.repeat(prot['stimFileName'][0:], nflies)             # grouping by STIM
+            stimfilenames_merged = [' + '.join(sf) for sf in prot['stimFileName']]
+            S = np.repeat(stimfilenames_merged, nflies)             # grouping by STIM
             F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
             stimnames, Sidx = np.unique(S, return_inverse=True)
             print(stimnames)
