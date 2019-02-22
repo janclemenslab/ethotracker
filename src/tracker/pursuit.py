@@ -61,7 +61,8 @@ class ProcessorType(Enum):
 
 def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
         start_frame: int=None, override: bool=False, processor='chaining',
-        init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000) -> int:
+        init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000,
+        show_raw_frame: bool=True) -> int:
     """Multi-animal tracker.
 
     Args:
@@ -111,7 +112,8 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
         except KeyboardInterrupt:
             raise
         except Exception as e:  # if fails start from scratch
-            logging.error(e)
+            logging.warning(e)
+            logging.info('   will start from scratch.')
             res_loaded = False
             pass
 
@@ -149,14 +151,17 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
     # iterate over frames
     start = time.time()
+    logging.info(f"Processing {res.number_of_frames}.")
     for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
             # get annotated frame if necessary
             if write_video or (display and res.frame_count % display == 0):
-                # frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
-                frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
+                if show_raw_frame:
+                    frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
+                else:
+                    frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
             # display annotated frame
             if display and res.frame_count % display == 0:
