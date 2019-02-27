@@ -7,6 +7,7 @@ import peakutils
 from scipy import signal
 import os
 import logging
+import pandas as pd
 
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
@@ -31,28 +32,37 @@ def load_data(file_name):
     return pos, led, nflies
 
 
-def parse_prot(filename):
-    with open(filename) as f:
-        content = f.readlines()
+def parse_session_log(logfile_name):
+    """Reconstructs playlist from log file.
 
-    prot = {'timestamp': [], 'stimFileName': [], 'silencePre': [], 'silencePost': [], 'delayPost': [], 'intensity': [], 'freq': [], 'MODE': []}
-    for line in content:
-        token = line.split(' ')
-        if len(token) > 1:  # consider only rows that contain protocol logs
-            ts, id, *data = token
-            prot['timestamp'].append(ts)
-            prot_fields = ''.join(data).split(';')
-            for field in prot_fields[:-1]:
-                splt = field.partition(',')
-                key = splt[0]
-                value = eval(splt[-1])
+    Args:
+        logfilename
+    Returns:
+        dict with playlist entries
+    """
+
+    with open(logfile_name, 'r') as f:
+        logs = f.read()
+    log_lines = logs.strip().split('\n')
+    session_log = []
+    for current_line in log_lines:
+        head, _, dict_str = current_line.partition(': ')
+
+        # process head
+        #     timestamp, hostname = head.split(' ')
+        #     timestamp = datetime.strptime(timestamp, '%Y-%m-%d,%H:%M:%S.%f')
+
+        if dict_str[:4] == 'cnt:':
+            dict_items = dict_str.strip().split('; ')
+            dd = dict()
+            for dict_item in dict_items:
+                key, val = dict_item.strip(';').split(': ')
                 try:
-                    value = eval(value)
-                except:
-                    pass
-
-                prot[key].append(value)
-    return prot
+                    dd[key.strip()] = eval(val.strip())
+                except (ValueError, NameError):
+                    dd[key.strip()] = val.strip()
+            session_log.append(dd)
+    return session_log
 
 
 def get_led_peaks(led, thres=0.8, min_interval=0):
@@ -157,12 +167,11 @@ if __name__ == '__main__':
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
-
+        SF = [0]
         # try to load log file and compute trial averages
         try:
             # parse log file to get order of stimuli
-            prot = parse_prot(prot_file_name)
-            # print(prot['stimFileName'])
+            prot = pd.DataFrame(parse_session_log(prot_file_name))
 
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
@@ -175,6 +184,7 @@ if __name__ == '__main__':
 
             stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
         except Exception as e:
+            import ipdb; ipdb.set_trace()
             print(e)
             stimfly_labels = None
             stimfly_mean = None
