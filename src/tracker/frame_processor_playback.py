@@ -1,6 +1,7 @@
 """Frame processor for tracking playback videos."""
 import numpy as np
 import logging
+import cv2
 
 import tracker.foreground as fg
 import tracker.tracker as tk
