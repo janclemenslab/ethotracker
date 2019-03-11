@@ -14,7 +14,7 @@ from tracker.background import BackGroundMax, BackGroundMean, BackGroundMedian
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 # plt.ion()
-cv2.setNumThreads(1)
+cv2.setNumThread(0)
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
     # TODO:
@@ -42,7 +42,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     # chambers mask and bounding box
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     chamber_center = np.uintp(np.array(res.background.shape)/2)-2
-    chamber_radius = np.uintp(np.min(chamber_center)-6)
+    chamber_radius = np.uintp(np.min(chamber_center)+50)
     res.chambers = cv2.circle(res.chambers, tuple(chamber_center), chamber_radius, color=[1, 1, 1], thickness=-1)
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
     # FIXME: no need to pre-pend background anymore?

@@ -16,7 +16,7 @@ from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
 plt.ion()
-cv2.setNumThreads(1)
+cv2.setNumThreads(0)
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
     # TODO:

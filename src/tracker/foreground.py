@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import scipy.ndimage as sci
 import skimage.segmentation
-cv2.setNumThreads(1)
+cv2.setNumThreads(0)
 
 def circular_kernel(kernel_size=3):
     return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))

@@ -15,13 +15,14 @@ from enum import Enum
 from typing import List
 
 import cv2
+cv2.setNumThreads(0)
+
 import numpy as np
 import defopt
 
 from videoreader import VideoReader
 from attrdict import AttrDict
 import tracker.foreground as fg
-cv2.setNumThreads(1)
 
 
 def annotate_frame(frame, res, raw_frame=True):
