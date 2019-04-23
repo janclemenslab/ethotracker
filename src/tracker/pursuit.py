@@ -149,7 +149,7 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
     res.threshold = threshold
     if write_video:
-        frame_size = tuple(np.uint(16 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 16)))
+        frame_size = tuple(np.uint(32 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 32)))
         logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
         vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
                              fps=vr.frame_rate, frameSize=frame_size)
@@ -158,7 +158,7 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
     # iterate over frames
     start = time.time()
-    logging.info(f"Processing {res.number_of_frames}.")
+    logging.info(f"Processing {res.number_of_frames} frames, starting at {res.start_frame}.")
     for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
