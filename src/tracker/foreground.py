@@ -374,11 +374,10 @@ def annotate(frame, centers=None, lines=None):
             nflies = lines.shape[0]
 
         colors = np.zeros((1, nflies, 3), np.uint8)
-        colors[0, :] = 220
-        colors[0, :, 0] = np.arange(0, 180, 180.0/nflies)
+        colors[0, :, 1:] = 220  # set saturation and brightness to 220
+        colors[0, :, 0] = np.arange(0, 180, 180.0 / nflies)  # set range of hues
         colors = cv2.cvtColor(colors, cv2.COLOR_HSV2BGR)[0].astype(np.float32) / 255.0
-        colors = [list(map(float, thisColor)) for thisColor in colors]
-
+        colors = [list(map(float, thisColor)) for thisColor in colors]  # convert all items in color list to float
     if centers is not None:
         for idx, center in enumerate(centers):
             cv2.circle(frame, (center[1], center[0]), radius=6, color=colors[idx], thickness=1)
