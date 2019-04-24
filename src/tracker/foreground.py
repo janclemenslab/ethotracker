@@ -4,6 +4,7 @@ import scipy.ndimage as sci
 import skimage.segmentation
 cv2.setNumThreads(0)
 
+
 def circular_kernel(kernel_size=3):
     return cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
 
@@ -48,11 +49,29 @@ def clean_labels(labeled_frame, new_labels=None, force_cont=False):
     old_labels = old_labels[sort_idx]
     new_labels = new_labels[sort_idx]
     # remap
-    index = np.digitize(labeled_frame, old_labels, right=True)
-    labeled_frame = new_labels[index]
+    index = np.digitize(labeled_frame.ravel(), old_labels, right=True)
+    labeled_frame = new_labels[index].reshape(labeled_frame.shape)
     if force_cont:
         labeled_frame, new_labels, _ = clean_labels(labeled_frame)
     return labeled_frame, new_labels, old_labels
+
+
+def remap_labels(labeled_frame, new_labels, old_labels=None):
+    """map all values in labeled_frame to new_labels.
+
+    Args:
+        labeled_frame - 2d matrix (or 3d?)
+        new_labels -
+        old_labels
+    Returns:
+        altered array
+    """
+    if old_labels is None:
+        old_labels = np.unique(labeled_frame)
+    nn = np.zeros_like(labeled_frame)
+    for ii in range(len(old_labels)):
+        nn[labeled_frame == new_labels[ii]] = old_labels[ii]
+    return nn
 
 
 def getpoints(frame):
@@ -83,13 +102,13 @@ def segment_connected_components(frame, minimal_size=None):
         too_small = np.where(size < minimal_size)
         if np.any(too_small):
             for lbl in too_small:
-                labeled_frame[labeled_frame==lbl+1] = 0  # remove
+                labeled_frame[labeled_frame == lbl+1] = 0  # remove
         tmp = labeled_frame.copy()
         for cnt, lbl in enumerate(np.unique(labeled_frame)):
-            tmp[labeled_frame==lbl] = cnt
+            tmp[labeled_frame == lbl] = cnt
         labeled_frame = tmp
         nlbl = np.unique(labeled_frame).shape[0]-1
-        frame[labeled_frame==0] = 0  # also remove from frame so it does not contribute to `points`
+        frame[labeled_frame == 0] = 0  # also remove from frame so it does not contribute to `points`
 
     points = getpoints(frame)
     # get labels for points
@@ -269,7 +288,7 @@ def split_connected_components_watershed(flybins, flycnt, this_labels, labeled_f
         con_centers, con_labels, con_points = segment_cluster(con_frame, num_clusters=flycnt[con])
         if do_erode:  # with erosion:
             # delete old labels and points - if we erode we will have fewer points
-            points = points[labels[:, 0] != con,:]
+            points = points[labels[:, 0] != con, :]
             labels = labels[labels[:, 0] != con]
             # append new labels and points
             labels = np.append(labels, np.max(labels) + 10 + con_labels, axis=0)
@@ -343,14 +362,14 @@ def get_chambers_chaining(background):
     circles = None  # init
     p1 = 200  # initial parameter
     while circles is None:  # as long as there is no chamber
-        circles = cv2.HoughCircles(background.astype(np.uint8),cv2.HOUGH_GRADIENT,1,100, param1=p1,param2=40,minRadius=int(background.shape[0]/3),maxRadius=int(background.shape[0]/2))
+        circles = cv2.HoughCircles(background.astype(np.uint8), cv2.HOUGH_GRADIENT, 1, 100, param1=p1, param2=40, minRadius=int(background.shape[0]/3), maxRadius=int(background.shape[0]/2))
         p1 = p1-10  # slowly decrease param
     circles = np.uint16(np.around(circles))
 
     # create binary mask
     mask = np.zeros(background.shape, dtype=np.uint8)
-    for i in circles[0,:]:
-        cv2.circle(mask,(i[0],i[1]),i[2]+30,255,-1)
+    for i in circles[0, :]:
+        cv2.circle(mask, (i[0], i[1]), i[2]+30, 255, -1)
     mask = mask > 0  # make binary
     return mask, circles
 

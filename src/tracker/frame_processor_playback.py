@@ -42,7 +42,12 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     # 3. get bounding boxes for non-empty chambers for cropping
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
 
-    # C: populate Results structure
+    # 4. order chambers by x position
+    new_labels = np.insert(np.argsort(res.chambers_bounding_box[1:,1,1])+1,0,0)
+    res.chambers_bounding_box = res.chambers_bounding_box[new_labels, ...]
+    res.chambers = fg.remap_labels(res.chambers, new_labels)
+
+    # C. populate results structure
     res.nflies = int(nflies)
     res.nchambers = int(np.max(res.chambers))
     res.file_name = file_name
