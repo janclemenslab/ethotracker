@@ -203,7 +203,4 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    if platform.system() is 'Linux':
-        logging.warning(f"Cluster job detected (system is {platform.system()}). Disabling threading in opencv2.")
-        cv2.setNumThreads(1)
     defopt.run(run)
