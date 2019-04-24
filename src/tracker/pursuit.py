@@ -1,10 +1,3 @@
-import os
-os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=4
-os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=4
-os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=6
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=4
-os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=6
-
 """Track videos."""
 import platform
 import sys
@@ -13,9 +6,8 @@ import logging
 import time
 from enum import Enum
 from typing import List
-
+import os
 import cv2
-cv2.setNumThreads(0)
 
 import numpy as np
 import defopt

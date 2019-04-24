@@ -2,7 +2,7 @@ import numpy as np
 from scipy import spatial
 from .munkres import Munkres
 import cv2
-cv2.setNumThreads(0)
+
 
 m = Munkres()
 

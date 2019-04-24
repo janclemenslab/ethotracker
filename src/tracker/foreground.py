@@ -2,7 +2,6 @@ import numpy as np
 import cv2
 import scipy.ndimage as sci
 import skimage.segmentation
-cv2.setNumThreads(0)
 
 
 def circular_kernel(kernel_size=3):
