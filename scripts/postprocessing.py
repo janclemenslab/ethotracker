@@ -184,7 +184,7 @@ if __name__ == '__main__':
 
             stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
         except Exception as e:
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
             print(e)
             stimfly_labels = None
             stimfly_mean = None
