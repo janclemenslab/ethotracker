@@ -38,6 +38,6 @@ python -m post...
 ```
 
 ## TODO
-[ ] implement chamber abstract class finder which can either take annotation file data or detects chambers automatically
-[ ] document the code!!
-[ ] add code for diagnostic plots (LED, all x-pos, y-pos, speeds, speed prob dists)
+- [ ] implement chamber abstract class finder which can either take annotation file data or detects chambers automatically
+- [ ] document the code!!
+- [ ] add code for diagnostic plots (LED, all x-pos, y-pos, speeds, speed prob dists)
