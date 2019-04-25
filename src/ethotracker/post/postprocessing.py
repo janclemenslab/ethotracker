@@ -2,17 +2,17 @@
 import numpy as np
 import h5py
 import scipy.signal
-import sys
 import peakutils
 import os
 import logging
 import pandas as pd
+import defopt
 
 
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
-            logging.info("deepdish file.")
+            logging.info("Loading deepdish file.")
         else:
             pos = f['centers'][:]
             led = f['led'][:]
@@ -142,11 +142,17 @@ def stats_by_group(data, grouping, fun):
     return group_labels, group_stats
 
 
-if __name__ == '__main__':
-    track_file_name = sys.argv[1]
-    prot_file_name = sys.argv[2]
-    save_file_name = sys.argv[3]
-    print('processing tracks in {0} with playlist {1}. will save to {2}'.format(track_file_name, prot_file_name, save_file_name))
+# if __name__ == '__main__':
+def main(track_file_name: str, prot_file_name: str, save_file_name: str):
+    """Post-process tracking results.
+
+    Args:
+        track_file_name - file produced by the tracker to postprocess
+        prot_file_name - experiment protocol file with stimulus information
+        save_file_name - path of file to save results to
+
+    """
+    logging.info('Processing tracks in {0} with playlist {1}. Will save to {2}'.format(track_file_name, prot_file_name, save_file_name))
 
     chunklen = 4000
     chunkpre = 2000
@@ -154,20 +160,19 @@ if __name__ == '__main__':
 
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
-
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
     try:
         plot_led_peaks(led, led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
     except:
         pass
-    if len(led_onsets):
-        print('found {0} led onsets'.format(len(led_onsets)))
-        spd = get_speed(pos[:, :, 0, :], smoothing_win)
-        # chunk data
 
+    if len(led_onsets):
+        logging.info('Found {0} led onsets'.format(len(led_onsets)))
+        spd = get_speed(pos[:, :, 0, :], smoothing_win)
 
         trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
+
         # calc base line and test spd
         spd_test = np.nanmean(trial_traces[2000:2400, :], axis=0)
         spd_base = np.nanmean(trial_traces[1000:1800, :], axis=0)
@@ -188,13 +193,12 @@ if __name__ == '__main__':
 
             stimfly_labels, stimfly_mean = stats_by_group(X, SF, np.nanmean)
         except Exception as e:
-            # import ipdb; ipdb.set_trace()
-            print(e)
+            logging.error(e)
             stimfly_labels = None
             stimfly_mean = None
             stimnames = ['unknown']
 
-        print(f'saving to {save_file_name}')
+        logging.info(f'Saving to {save_file_name}')
         with h5py.File(save_file_name, 'w') as f:
             f.create_dataset('spd_base', data=spd_base, compression='gzip')
             f.create_dataset('spd_test', data=spd_test, compression='gzip')
@@ -207,4 +211,9 @@ if __name__ == '__main__':
             f.create_dataset('track_file_name', data=np.array([track_file_name], dtype=object), dtype=h5py.special_dtype(vlen=str))
             f.create_dataset('stim_names', data=np.array(stimnames, dtype=object), dtype=h5py.special_dtype(vlen=str))
     else:
-        print('ERROR: no LED onsets found. will not save.')
+        logging.error('ERROR: no LED onsets found. will not save.')
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    defopt.run(main)
