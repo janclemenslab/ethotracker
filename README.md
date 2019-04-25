@@ -12,7 +12,8 @@ pip install git+https://github.com/postpop/attrdict
 
 Install the package for production:
 ```shell
-pip install git+https://github.com/janclemenslab/ethotracker```
+pip install git+https://github.com/janclemenslab/ethotracker
+```
 or for development:
 ```shell
 git clone https://github.com/janclemenslab/ethotracker
