@@ -2,6 +2,7 @@
 import numpy as np
 import h5py
 import deepdish as dd
+import xarray as xr
 import peakutils
 import os
 import scipy.signal
@@ -23,7 +24,7 @@ def load_data(file_name):
         pos = f['centers'][:]
         led = f['led'][:]
         lines = f['lines'][:]
-        start_frame = f['start_frame']        
+        start_frame = f['start_frame']
     pos = pos[start_frame + 1:-1000, :, :]
     led = led[start_frame + 1:-1000, 0].T
 

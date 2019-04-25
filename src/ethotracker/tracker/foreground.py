@@ -82,7 +82,7 @@ def getpoints(frame):
 
 
 def samplepoints(frame, nval=5000):
-    frame = frame/np.sum(frame)  # normalize to make PDF
+    frame = frame / np.sum(frame)  # normalize to make PDF
     maxval = frame.shape[0] * frame.shape[1]
     linear_indices = np.random.choice(maxval, size=(nval, 1), replace=True, p=np.reshape(frame, (maxval,)))
     points = np.unravel_index(linear_indices, frame.shape[:2])
@@ -101,12 +101,12 @@ def segment_connected_components(frame, minimal_size=None):
         too_small = np.where(size < minimal_size)
         if np.any(too_small):
             for lbl in too_small:
-                labeled_frame[labeled_frame == lbl+1] = 0  # remove
+                labeled_frame[labeled_frame == lbl + 1] = 0  # remove
         tmp = labeled_frame.copy()
         for cnt, lbl in enumerate(np.unique(labeled_frame)):
             tmp[labeled_frame == lbl] = cnt
         labeled_frame = tmp
-        nlbl = np.unique(labeled_frame).shape[0]-1
+        nlbl = np.unique(labeled_frame).shape[0] - 1
         frame[labeled_frame == 0] = 0  # also remove from frame so it does not contribute to `points`
 
     points = getpoints(frame)
@@ -190,7 +190,7 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
     labels = labeled_frame[labeled_frame > 0]  # get all foreground labels
 
     points = getpoints(labeled_frame > 0)  # get position of all foreground pixels
-    number_of_segments = np.unique(labeled_frame)[1:].shape[0]+1  # +1 since 0 is background
+    number_of_segments = np.unique(labeled_frame)[1:].shape[0] + 1  # +1 since 0 is background
     centers = np.zeros((number_of_segments, 2))
     std = np.zeros((number_of_segments, 2))
     size = np.zeros((number_of_segments, 1))
@@ -230,7 +230,7 @@ def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_di
         # get conn comp each fly is in using previous position
         fly_conncomps = labeled_frame_id[np.uintp(positions[:, 0]), np.uintp(positions[:, 1])]
         # count number of flies per conn comp
-        flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5 + np.arange(np.max(labeled_frame+2)))
+        flycnt, flybins = np.histogram(fly_conncomps, bins=-0.5 + np.arange(np.max(labeled_frame + 2)))
         cnt += 1
     flybins = np.uintp(flybins + 0.5)  # make bins indices/labels
     return fly_conncomps, flycnt, flybins, cnt
@@ -320,9 +320,9 @@ def detect_led(frame, channel=-1, vsize=80, hsize=200):
     corner_brightness = list()
     # define slices for all four corners of the frame
     corner_slices = ((slice(0, vsize), slice(0, hsize)),
-                     (slice(0, vsize), slice(h-hsize, h)),
-                     (slice(v-vsize, v), slice(0, hsize)),
-                     (slice(v-vsize, v), slice(h-hsize, h)))
+                     (slice(0, vsize), slice(h - hsize, h)),
+                     (slice(v - vsize, v), slice(0, hsize)),
+                     (slice(v - vsize, v), slice(h - hsize, h)))
 
     # calculate brightness for each corner
     for corner_slice in corner_slices:
@@ -361,14 +361,14 @@ def get_chambers_chaining(background):
     circles = None  # init
     p1 = 200  # initial parameter
     while circles is None:  # as long as there is no chamber
-        circles = cv2.HoughCircles(background.astype(np.uint8), cv2.HOUGH_GRADIENT, 1, 100, param1=p1, param2=40, minRadius=int(background.shape[0]/3), maxRadius=int(background.shape[0]/2))
-        p1 = p1-10  # slowly decrease param
+        circles = cv2.HoughCircles(background.astype(np.uint8), cv2.HOUGH_GRADIENT, 1, 100, param1=p1, param2=40, minRadius=int(background.shape[0] / 3), maxRadius=int(background.shape[0] / 2))
+        p1 = p1 - 10  # slowly decrease param
     circles = np.uint16(np.around(circles))
 
     # create binary mask
     mask = np.zeros(background.shape, dtype=np.uint8)
     for i in circles[0, :]:
-        cv2.circle(mask, (i[0], i[1]), i[2]+30, 255, -1)
+        cv2.circle(mask, (i[0], i[1]), i[2] + 30, 255, -1)
     mask = mask > 0  # make binary
     return mask, circles
 
@@ -415,59 +415,3 @@ def show(frame, window_name="frame", time_out=1, autoscale=False):
             frame = frame / np.max(frame)
     cv2.imshow(window_name, np.float32(frame))
     cv2.waitKey(time_out)
-
-
-def test():
-    frame = cv2.imread("test/frame.png")
-    background = cv2.imread("test/background.png")
-
-    foreground = (background.astype(np.float32) - frame) / 255.0
-    show(foreground, time_out=100)
-
-    foreground = erode(foreground, 6)
-    show(foreground, time_out=100)
-
-    foreground = dilate(foreground, 6)
-    show(foreground, time_out=100)
-
-    foreground_thres = threshold(foreground, 0.4)
-    foreground_thres = foreground_thres[:, :, 0]
-    # np.save('fg.npy', foreground_thres)
-    show(foreground_thres, time_out=100)
-
-    centers, labels, _, _, area, labeled_frame = segment_connected_components(foreground_thres)
-    print(centers)
-    print(area)
-    show(labeled_frame, time_out=1000)
-    show(annotate(frame / 255, centers), time_out=2000)
-
-    centers = segment_cluster(foreground_thres, 12)[0]
-    print(centers)
-
-    center_of_mass, _, _, _, _ = segment_center_of_mass(foreground_thres)
-    print(center_of_mass)
-    show(annotate(frame / 255, centers), time_out=2000)
-
-    labeled_frame = get_chambers(background)
-    bounding_box = get_bounding_box(labeled_frame)
-    show(labeled_frame / np.max(labeled_frame), time_out=1000)
-    show(labeled_frame == 5, time_out=1000)  # pick chamber #5
-
-    show(crop(frame, [10, 550, 100, -1]) / 255, time_out=1000)
-
-    labeled_frame = get_chambers(background)
-    labeled_frame[labeled_frame == 10] = 0
-    labeled_frame[labeled_frame == 5] = 20
-
-    show(labeled_frame / np.max(labeled_frame), time_out=1000)
-    new_labels = np.unique(labeled_frame)
-    new_labels[-1] = 0  # delete last chamber (#20)
-    # delete last chamber only
-    print(np.unique(clean_labels(labeled_frame, new_labels)[0]))
-    # remap to cont labels
-    print(np.unique(clean_labels(labeled_frame, new_labels, force_cont=True)[0]))
-    show(labeled_frame / np.max(labeled_frame), time_out=1000)
-
-
-if __name__ == "__main__":
-    test()

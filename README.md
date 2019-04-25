@@ -1,32 +1,43 @@
-# analysis
+# Ethotracker
 
-## installation
-requirements...
-`pip install -e .`
+## Installation
+Install dependencies using `conda`:
+```shell
+conda install numpy scipy h5py peakutils opencv pandas pyyaml matplotlib scikit-image xarray
+conda install deepdish -c conda-forge
+pip install defopt
+pip install git+http://github.com/postpop/videoreader
+pip install git+https://github.com/postpop/attrdict
+```
 
-## organization
-workflow:
+Install the package for production:
+```shell
+pip install git+https://github.com/janclemenslab/ethotracker```
+or for development:
+```shell
+git clone https://github.com/janclemenslab/ethotracker
+cd ethotracker
+pip install -e .
+```
 
-organized with [snakemake](snakemake), a make-like tool
-`bsubmit_block.sh`
+## Usage
 
+Init tracker
+```shell
+python -m init...
+```
 
+Track:
+```shell
+python -m track...
+```
 
-# TODO
-[x] use logging to flag different log levels (info, warning, error)
-[ ] implement exceptions (e.g ObjectLostException, ...)
+Postprocess
+```shell
+python -m post...
+```
+
+## TODO
 [ ] implement chamber abstract class finder which can either take annotation file data or detects chambers automatically
-[x] implement background detector abstract class for max/min/mean/median/MOG
-[x] display class...
-[ ] have yaml/toml configuration file to combine all options and their parameters
-
-# config format
-function.background = "command"
-function.chamber = "command"
-function.trackchamber = "command"
-
-
-# playback analyses
-track
-scripts/postprocessing.py
-scripts/gather.py
+[ ] document the code!!
+[ ] add code for diagnostic plots (LED, all x-pos, y-pos, speeds, speed prob dists)

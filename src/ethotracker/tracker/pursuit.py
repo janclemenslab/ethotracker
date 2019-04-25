@@ -14,7 +14,7 @@ import defopt
 
 from videoreader import VideoReader
 from attrdict import AttrDict
-import tracker.foreground as fg
+from . import foreground as fg
 
 
 def annotate_frame(frame, res, raw_frame=True):
@@ -84,13 +84,13 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
     """
     """Track movie."""
     if processor.value == 'chaining':
-        from tracker.frame_processor_chaining import Prc, init
+        from .frame_processor_chaining import Prc, init
     elif processor.value == 'playback':
-        from tracker.frame_processor_playback import Prc, init
+        from .frame_processor_playback import Prc, init
     elif processor.value == 'chaining_hires':
-        from tracker.frame_processor_chaining_hires import Prc, init
+        from .frame_processor_chaining_hires import Prc, init
     elif processor.value == 'chaining_coarse':
-        from tracker.frame_processor_chaining_coarse import Prc, init
+        from .frame_processor_chaining_coarse import Prc, init
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
 

@@ -3,10 +3,7 @@
 import numpy as np
 import cv2
 import copy
-try: # python 2
-    import tkFileDialog as filedialog
-except ImportError: # python 3
-    import tkinter.filedialog as filedialog
+import tkinter.filedialog as filedialog
 import os.path
 import sys
 import yaml

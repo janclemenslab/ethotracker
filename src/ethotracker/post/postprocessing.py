@@ -4,10 +4,10 @@ import h5py
 import scipy.signal
 import sys
 import peakutils
-from scipy import signal
 import os
 import logging
 import pandas as pd
+
 
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
@@ -66,10 +66,10 @@ def parse_session_log(logfile_name):
 
 
 def get_led_peaks(led, thres=0.8, min_interval=0):
-    led_diff = np.diff(signal.savgol_filter(led, 11, 6)).T
+    led_diff = np.diff(scipy.signal.savgol_filter(led, 11, 6)).T
     # import ipdb; ipdb.set_trace()
-    led_onsets = peakutils.indexes(led_diff[:,0], thres=thres)
-    led_offsets = peakutils.indexes(-led_diff[:,0], thres=thres)
+    led_onsets = peakutils.indexes(led_diff[:, 0], thres=thres)
+    led_offsets = peakutils.indexes(-led_diff[:, 0], thres=thres)
 
     # filter out repeats
     # prepend large value to intervals so we keep the first on- and offsets
@@ -80,10 +80,10 @@ def get_led_peaks(led, thres=0.8, min_interval=0):
     led_offsets = led_offsets[led_offset_interval > min_interval]
     return led_onsets, led_offsets
 
+
 def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
+
     import matplotlib.pyplot as plt
-    # fig = plt.gcf()
-    # fig.set_size_inches(20, 10)
 
     ax = plt.subplot(311)
     ax.plot(led, linewidth=0.75)
@@ -101,6 +101,7 @@ def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
     # plt.axis('tight')
     if savefilename:
         plt.savefig(savefilename)
+
 
 def get_speed(pos, medfiltlen=None):
     spd = np.sqrt(np.sum(np.gradient(pos, axis=0).astype(np.float32)**2, axis=2))
@@ -147,6 +148,10 @@ if __name__ == '__main__':
     save_file_name = sys.argv[3]
     print('processing tracks in {0} with playlist {1}. will save to {2}'.format(track_file_name, prot_file_name, save_file_name))
 
+    chunklen = 4000
+    chunkpre = 2000
+    smoothing_win = 7
+
     # read tracking data
     pos, led, nflies = load_data(track_file_name)
 
@@ -158,10 +163,9 @@ if __name__ == '__main__':
         pass
     if len(led_onsets):
         print('found {0} led onsets'.format(len(led_onsets)))
-        spd = get_speed(pos[:, :, 0, :], 7)
+        spd = get_speed(pos[:, :, 0, :], smoothing_win)
         # chunk data
-        chunklen = 4000
-        chunkpre = 2000
+
 
         trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
         # calc base line and test spd

@@ -8,9 +8,9 @@ import xarray as xr
 import pandas as pd
 from itertools import product
 
-import tracker.foreground as fg
-import tracker.tracker as tk
-from tracker.background import BackGroundMax, BackGroundMean, BackGroundMedian
+from . import foreground as fg
+from . import tracker as tk
+from .background import BackGroundMax, BackGroundMean, BackGroundMedian
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 

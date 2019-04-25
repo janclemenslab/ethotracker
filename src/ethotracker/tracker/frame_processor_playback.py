@@ -3,9 +3,9 @@ import numpy as np
 import logging
 import cv2
 
-import tracker.foreground as fg
-import tracker.tracker as tk
-from tracker.background import BackGroundMax, BackGroundMean
+from . import foreground as fg
+from . import tracker as tk
+from .background import BackGroundMax, BackGroundMean
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
