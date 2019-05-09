@@ -32,10 +32,12 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
     # 1. read frame and get foreground
     foreground = fg.threshold(res.background - vr[0][:, :, res.frame_channel], threshold * 255)
+    foreground = fg.erode(foreground, 3)
+    foreground = cv2.medianBlur(foreground, 3)
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
-    labels[area < 400] = 0                                                  # mark empty chambers for deletion
+    labels[area < 150] = 0                                                  # mark empty chambers for deletion
     res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
     # 3. get bounding boxes for non-empty chambers for cropping
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
