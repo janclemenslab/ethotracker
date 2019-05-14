@@ -54,6 +54,7 @@ def display_frame(frame_with_tracks):
 class ProcessorType(Enum):
     chaining = 'chaining'
     playback = 'playback'
+    playback_red = 'playback_red'
     chaining_hires = 'chaining_hires'
     chaining_coarse = 'chaining_coarse'
 
@@ -87,6 +88,8 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
         from .frame_processor_chaining import Prc, init
     elif processor.value == 'playback':
         from .frame_processor_playback import Prc, init
+    elif processor.value == 'playback_red':
+        from .frame_processor_playback_red import Prc, init
     elif processor.value == 'chaining_hires':
         from .frame_processor_chaining_hires import Prc, init
     elif processor.value == 'chaining_coarse':
