@@ -184,7 +184,7 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
 
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
-            stimfilenames_merged = [' + '.join(sf) for sf in prot['stimFileName']]
+            stimfilenames_merged = [' + '.join(sf + [str(i[0])]) for sf, i in zip(prot['stimFileName'], prot['intensity'])]
             S = np.repeat(stimfilenames_merged, nflies)             # grouping by STIM
             F = np.tile(list(range(nflies)), int(S.shape[0] / nflies))  # grouping by FLY
             stimnames, Sidx = np.unique(S, return_inverse=True)
