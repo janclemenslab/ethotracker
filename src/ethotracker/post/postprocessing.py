@@ -7,6 +7,7 @@ import os
 import logging
 import pandas as pd
 import defopt
+from datetime import datetime
 
 
 def load_data(file_name):
@@ -32,11 +33,12 @@ def load_data(file_name):
     return pos, led, nflies
 
 
-def parse_session_log(logfile_name):
+def parse_log(logfile_name: str, line_filter: str = 'cnt:'):
     """Reconstructs playlist from log file.
 
     Args:
-        logfilename
+        logfilename (str)
+        line_filter (str) : only parse lines that start with this string
     Returns:
         dict with playlist entries
     """
@@ -48,13 +50,13 @@ def parse_session_log(logfile_name):
     for current_line in log_lines:
         head, _, dict_str = current_line.partition(': ')
 
-        # process head
-        #     timestamp, hostname = head.split(' ')
-        #     timestamp = datetime.strptime(timestamp, '%Y-%m-%d,%H:%M:%S.%f')
-
-        if dict_str[:4] == 'cnt:':
-            dict_items = dict_str.strip().split('; ')
+        if dict_str[:len(line_filter)] == line_filter:
             dd = dict()
+
+            timestamp, dd['hostname'], *_ = head.split(' ')
+            dd['timestamp'] = datetime.strptime(timestamp, '%Y-%m-%d,%H:%M:%S.%f')
+
+            dict_items = dict_str.strip().split('; ')
             for dict_item in dict_items:
                 key, val = dict_item.strip(';').split(': ')
                 try:
@@ -81,8 +83,8 @@ def get_led_peaks(led, thres=0.8, min_interval=0):
     return led_onsets, led_offsets
 
 
-def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
-
+def plot_led_peaks(led, led_onsets, led_offsets, savefilename=None):
+    """Plot LED traces with peaks."""
     import matplotlib.pyplot as plt
 
     ax = plt.subplot(311)
@@ -98,8 +100,28 @@ def plot_led_peaks(led, led_onsets, led_offset, savefilename=None):
     ax.plot(np.diff(led_onsets), 'o-')
     ax.plot(np.diff(led_offsets), 'x-')
 
-    # plt.axis('tight')
-    if savefilename:
+    if savefilename is not None:
+        plt.savefig(savefilename)
+
+
+def plot_thu_log(thu_log, savefilename=None):
+    """Plot temperature and humidity."""
+    from scipy.signal import medfilt
+    import matplotlib.pyplot as plt
+
+    plt.subplot(211)
+    plt.plot(thu_log.timestamp, thu_log.temperature, linewidth=0.5)
+    plt.plot(thu_log.timestamp, medfilt(thu_log.temperature, 3))  # use median filter to remove outliers from sensor noise
+    plt.ylabel('Temperature [$^\circ$C]')
+    plt.legend(['raw', 'filtered'])
+
+    plt.subplot(212)
+    plt.plot(thu_log.timestamp, thu_log.humidity, linewidth=0.5)
+    plt.plot(thu_log.timestamp, medfilt(thu_log.humidity, 3))
+    plt.ylabel('Humidity [%]')
+    plt.xlabel('Timestamp')
+
+    if savefilename is not None:
         plt.savefig(savefilename)
 
 
@@ -163,9 +185,16 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
     try:
-        plot_led_peaks(led, led_onsets, led_offsets, os.path.splitext(save_file_name)[0]+'.png')
+        plot_led_peaks(led, led_onsets, led_offsets,
+                       savefilename=os.path.splitext(save_file_name)[0] + '.png')
     except:
         pass
+
+    thu_log_filename = prot_file_name.replace('snd', 'thu')
+    if os.path.exists(thu_log_filename):
+        logging.info('parsing temperature & humidity logs')
+        thu_log = pd.DataFrame(parse_log(thu_log_filename, line_filter='temperature:'))
+        plot_thu_log(thu_log, savefilename=os.path.splitext(thu_log_filename)[0] + '.png')
 
     if len(led_onsets):
         logging.info('Found {0} led onsets'.format(len(led_onsets)))
@@ -180,7 +209,7 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
         # try to load log file and compute trial averages
         try:
             # parse log file to get order of stimuli
-            prot = pd.DataFrame(parse_session_log(prot_file_name))
+            prot = pd.DataFrame(parse_log(prot_file_name, line_filter='cnt:'))
 
             # average trials by stimulus
             X = trial_traces - spd_base  # subtract baseline from each trial
