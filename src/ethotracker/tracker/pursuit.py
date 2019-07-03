@@ -37,18 +37,23 @@ def annotate_frame(frame, res, raw_frame=True):
     return frame_with_tracks
 
 
-def display_frame(frame_with_tracks):
+def display_frame(nb_chambers):
     """Display list of frames."""
     import matplotlib.pyplot as plt
-    plt.ion()
-    plt.figure(1)
+    fig, ax = plt.subplots(ncols=nb_chambers, squeeze=False)
     plt.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.99, wspace=0.01, hspace=0.01)
-    for cnt, frame in enumerate(frame_with_tracks):
-        plt.subplot(1, len(frame_with_tracks), cnt+1)
-        plt.imshow(frame)
-        plt.axis('off')
-    plt.show()
-    plt.pause(0.00001)
+    RUN = True
+    while RUN:
+        frame_with_tracks = yield
+        if frame_with_tracks is not None:
+            for cnt, frame in enumerate(frame_with_tracks):
+                ax[cnt,0].imshow(frame)
+                ax[cnt,0].axis('off')
+            fig.show()
+            plt.pause(0.00001)
+        else:
+            RUN = False
+    plt.close()
 
 
 class ProcessorType(Enum):
@@ -154,6 +159,9 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
     # iterate over frames
     start = time.time()
     logging.info(f"Processing {res.number_of_frames} frames, starting at {res.start_frame}.")
+    if display:
+        disp = display_frame(res.nchambers)
+        disp.send(None)
     for frame in vr[start_frame:]:
         try:
             res, foreground = frame_processor.process(frame, res)
@@ -167,7 +175,7 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
             # display annotated frame
             if display and res.frame_count % display == 0:
-                display_frame(frame_with_tracks)
+                disp.send(frame_with_tracks)
 
             # save annotated frame to video
             if write_video:
