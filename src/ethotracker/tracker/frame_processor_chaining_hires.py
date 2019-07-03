@@ -224,7 +224,7 @@ class Prc():
 
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
-
+                                # plt.figure('watershed')
                                 # plt.subplot(121)
                                 # plt.cla()
                                 # plt.imshow(con_frame)
@@ -270,9 +270,10 @@ class Prc():
                             logging.info(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
                             centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
 
-                    else:  # if still flies w/o conn compp fall back to segment_cluster
+                    else:  # if still flies w/o conn compp fall back to segment_cluster, using previous positions as initial conditions
                         logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
-                        centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                        # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                        centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
                         frame_error[chb] = 3
 
                     if points.shape[0] > 0:   # make sure we have not lost the flies in the current frame

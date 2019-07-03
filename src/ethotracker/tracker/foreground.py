@@ -152,6 +152,17 @@ def segment_cluster(frame, num_clusters=1, term_crit=(cv2.TERM_CRITERIA_EPS, 100
     return centers, labels, points
 
 
+def segment_cluster_sklearn(frame, num_clusters=None, init_method='k-means++'):
+    """Cluster points to get fly positions - accepts old positions as init_method for more stable tracking."""
+    from sklearn.cluster import KMeans
+    points = getpoints(frame)
+    # points = samplepoints(frame)
+    kmeans = KMeans(n_clusters=num_clusters, init=init_method, n_init=1).fit(points)
+    labels = kmeans.labels_[..., np.newaxis]
+    centers = kmeans.cluster_centers_
+    return centers, labels, points
+
+
 def segment_gmm(frame, num_clusters=1, em_cov=cv2.ml.EM_COV_MAT_DIAGONAL, initial_means=None, n_samples=1000):
     """Cluster by fitting GMM."""
     points = samplepoints(frame, n_samples)
