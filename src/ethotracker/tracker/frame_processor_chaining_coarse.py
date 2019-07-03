@@ -219,7 +219,8 @@ class Prc():
 
                         if FRAME_PROCESSING_ERROR:
                             logging.info(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
-                            centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                            # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
+                            centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
 
                     else:  # if still flies w/o conn compp fall back to segment_cluster
                         logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
