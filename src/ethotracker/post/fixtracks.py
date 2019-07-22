@@ -1,7 +1,9 @@
 """Functions for correcting tracks - currently implemented: fix head-tail orientation."""
 import numpy as np
+import deepdish as dd
 import scipy.signal
-
+import logging
+import defopt
 
 def smooth(x, N):
     """Smooth signal using box filter of length N samples."""
@@ -67,3 +69,17 @@ def fix_orientations(lines0, chamber_number=0):
         # 4. swap head and tail
         lines_fixed[ynew < 0, chamber_number, fly, :, :] = lines_fixed[ynew < 0, chamber_number, fly, ::-1, :]
     return lines_fixed
+
+
+def run(track_file_name: str, save_file_name: str):
+    """Load data, call fix_orientations and save data."""
+    logging.info(f"   processing tracks in {track_file_name}. will save to {save_file_name}")
+    data = dd.io.load(track_file_name)
+    data['lines'] = fix_orientations(data['lines'])
+    logging.info(f"   saving fixed tracks to {save_file_name}")
+    dd.io.save(save_file_name, data)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    defopt.run(run)
