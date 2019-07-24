@@ -19,6 +19,7 @@ def load_data(file_name):
             led = f['led'][:]
             start_frame = f['start_frame'].value
             end_frame = f['frame_count'].value
+            chambers_bounding_box = f['chambers_bounding_box'][:]
 
     import deepdish as dd
     data = dd.io.load(file_name)
@@ -26,11 +27,31 @@ def load_data(file_name):
     led = data['led']
     start_frame = data['start_frame']
     end_frame = data['frame_count']
+    chambers_bounding_box = data['chambers_bounding_box']
 
     pos = pos[start_frame + 1:end_frame, :, :]
     led = led[start_frame + 1:end_frame, 0].T
     nflies = pos.shape[1]
-    return pos, led, nflies
+    return pos, led, nflies,chambers_bounding_box
+
+
+def convert_speed(spd, chambers_bounding_box, chb_length = 46, freq = 40):
+    """Converts speed with pixel/frame units into mm/second.
+    Args:
+        spd (ndarray) :
+            Speed array in pixel per frame
+        chambers_bounding_box (2Darray)
+        chb_length (int) :
+            Chamber length in mm. Defaults to 46 mm.
+        freq (int) :
+            Sampling frequency of frames. Defaults to 40Hz.
+    Returns:
+        Speed array in mm/sec
+    """
+    chb_length_pxl = chambers_bounding_box[1:, :, 0] # Extract pxl length pos
+    chb_length_pxl = np.mean(np.diff(chb_length_pxl, axis = 1)) # Mean pxl length
+    frame_to_mm = chb_length/chb_length_pxl # mm/pxl scale
+    return spd*frame_to_mm*freq
 
 
 def parse_log(logfile_name: str, line_filter: str = 'cnt:'):
@@ -181,7 +202,7 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
     smoothing_win = 7
 
     # read tracking data
-    pos, led, nflies = load_data(track_file_name)
+    pos, led, nflies, chambers_bounding_box = load_data(track_file_name)
     # detect LED onsets
     led_onsets, led_offsets = get_led_peaks(led, thres=0.8, min_interval=1000)
     try:
@@ -199,6 +220,7 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
     if len(led_onsets):
         logging.info('Found {0} led onsets'.format(len(led_onsets)))
         spd = get_speed(pos[:, :, 0, :], smoothing_win)
+        spd = convert_speed(spd, chambers_bounding_box)
 
         trial_traces = chunk_data(spd, led_onsets[:-1] - chunkpre, chunklen)
 
