@@ -61,7 +61,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.led = np.zeros((res.number_of_frames + 1000, res.nflies, 1), dtype=np.float16)
     # save initialized results object
     res.status = "initialized"
-    res.save(file_name[0:-4] + '_tracks.h5')
+    # res.save(file_name[0:-4] + '_tracks.h5')
     # printf('saving init')
     logging.info(f'found {res.nchambers} fly bearing chambers')
     return res
