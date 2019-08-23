@@ -1,6 +1,4 @@
 """Track videos."""
-import matplotlib
-matplotlib.use('MacOSX')
 import platform
 import sys
 import traceback
@@ -216,4 +214,6 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    import warnings
+    warnings.filterwarnings("ignore", category=RuntimeWarning) 
     defopt.run(run)
