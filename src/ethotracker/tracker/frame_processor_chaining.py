@@ -56,61 +56,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.nframes = len(vr)
-    # try:
-    #     timestamps_file = os.path.splitext(res.file_name)[0] + '_timestamps.h5'
-    #     timestamps = dd.io.load(timestamps_file, '/timestamps')
-    # except OSError as e:
-    #     logging.error(e)
-    #     logging.warning('setting time stamps None.')
-    #     timestamps = None
-    # # time stamps should start at 0 and have reference time stamps for start time
-    # # FIXME: time stamps should be proper datetime64 or timedelta64 as in http://xarray.pydata.org/en/stable/time-series.html
-    # res.timestamps_ref = 0#timestamps[0]
-    # res.timestamps = np.zeros((res.nframes+1000,))#timestamps - res.timestamps_ref
-    # # TODO: this could also include sex, genotype etc. so we can directly select
-    # chamber_fly = pd.MultiIndex.from_product([range(res.nchambers), range(res.nflies), ['unknown'], ['NM91']],
-    #                                          names=('chamber', 'individual', 'sex', 'genotype'))
-    #
-    # pos_head = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
-    #                         attrs={'units': 'pixels'},
-    #                         dims=['time', 'fly', 'coordinate']
-    #                         )
-    # pos_tail = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
-    #                         attrs={'units': 'pixels'},
-    #                         dims=['time', 'fly', 'coordinate']
-    #                         )
-    # pos_center = xr.DataArray(data=np.zeros((res.nframes+1000, res.nchambers*res.nflies, 2), dtype=np.float16),
-    #                           attrs={'units': 'pixels'},
-    #                           dims=['time', 'fly',  'coordinate']
-    #                           )
-    # flyarea = xr.DataArray(data=np.zeros((res.nframes + 1000, res.nchambers*res.nflies), dtype=np.float16),
-    #                        attrs={'units': 'pixels'},
-    #                        dims=['time', 'fly'],
-    #                        )
-    # led = xr.DataArray(data=np.zeros((res.nframes + 1000,), dtype=np.float16),
-    #                    attrs={'units': None, 'mask': res.led_mask, 'bounding_box': res.led_mask},
-    #                    dims=['time'],
-    #                    )
-    # frame_errors = xr.DataArray(data=np.zeros((res.nframes + 1000, res.nchambers, ), dtype=np.uint8),
-    #                             attrs={'units': None, 'errorcodes': None},
-    #                             dims=['time', 'chamber'],
-    #                             )
-    # tracks = xr.Dataset(data_vars={'flyarea': flyarea, 'led': led, 'frameerrors': frame_errors,
-    #                                    'head': pos_head, 'center': pos_center, 'tail': pos_tail},
-    #                     attrs={'filename': 'test.h5', 'machine': 'localhost', 'user': 'icke', 'date': '20170203',
-    #                            'background': res.background,
-    #                            'threshold': res.threshold,
-    #                            'chambers': res.chambers, 'chambers_bounding_box': res.chambers_bounding_box,
-    #                            },
-    #                     coords={'time': res.timestamps, 'reference_time': res.timestamps_ref,
-    #                             'fly': chamber_fly,
-    #                             'coordinate': ['x', 'y'],
-    #                             },
-    #                     )
-    # # res.center[res.start_frame, ...] = ann['flypositions']  # FIXME: annotated fly positions should match chambers
-    # print(tracks)
-    # dd.io.save('test.h5', tracks)
-
+    
     res.centers = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.centers[res.frame_count, 0, :, :] = res.centers_initial
     res.lines = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)

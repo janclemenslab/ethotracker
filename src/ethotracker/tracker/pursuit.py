@@ -1,17 +1,13 @@
 """Track videos."""
-import platform
 import sys
 import traceback
 import logging
 import time
 from enum import Enum
 from typing import List
-import os
 import cv2
-
 import numpy as np
 import defopt
-
 from videoreader import VideoReader
 from attrdict import AttrDict
 from . import foreground as fg
@@ -47,8 +43,8 @@ def display_frame(nb_chambers):
         frame_with_tracks = yield
         if frame_with_tracks is not None:
             for cnt, frame in enumerate(frame_with_tracks):
-                ax[cnt,0].imshow(frame)
-                ax[cnt,0].axis('off')
+                ax[cnt, 0].imshow(frame)
+                ax[cnt, 0].axis('off')
             fig.show()
             plt.pause(0.00001)
         else:
@@ -64,10 +60,10 @@ class ProcessorType(Enum):
     chaining_coarse = 'chaining_coarse'
 
 
-def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, threshold: float=0.4,
-        start_frame: int=None, override: bool=False, processor='chaining',
-        init_only: bool=False, write_video: bool=False, led_coords: List[int]=[], interval_save: int=1000,
-        show_raw_frame: bool=True) -> int:
+def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, threshold: float = 0.4,
+        start_frame: int = None, override: bool = False, processor='chaining',
+        init_only: bool = False, led_coords: List[int] = [], interval_save: int = 1000,
+        show_raw_frame: bool = True) -> int:
     """Multi-animal tracker.
 
     Args:
@@ -80,7 +76,6 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
       override(bool): override existing initialization or intermediate results
       processor(ProcessorType): class to process frames
       init_only(bool): only initialize, do not track
-      write_video(bool): save annotated vid with tracks
       led_coords(list[int]): should be a sequence of 4 values OTHERWISE will autodetect'
       interval_save(int): save intermediate resultse very nth frame
 
@@ -148,12 +143,6 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
         return
 
     res.threshold = threshold
-    if write_video:
-        frame_size = tuple(np.uint(32 * np.floor(np.array(vr[0].shape[0:2], dtype=np.double) / 32)))
-        logging.warn('since x264 frame size need to be multiple of 16, frames will be truncated from {0} to {1}'.format(vr[0].shape[0:2], frame_size))
-        vw = cv2.VideoWriter(file_name[0:-4] + "tracks.avi", fourcc=cv2.VideoWriter_fourcc(*'X264'),
-                             fps=vr.frame_rate, frameSize=frame_size)
-
     frame_processor = Prc(res)
 
     # iterate over frames
@@ -167,19 +156,14 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
             res, foreground = frame_processor.process(frame, res)
             res.led[res.frame_count] = np.mean(fg.crop(frame, res.led_coords))
             # get annotated frame if necessary
-            if write_video or (display and res.frame_count % display == 0):
+            if display and res.frame_count % display == 0:
                 if show_raw_frame:
                     frame_with_tracks = annotate_frame(frame, res, raw_frame=True)
                 else:
                     frame_with_tracks = annotate_frame(foreground, res, raw_frame=False)
 
-            # display annotated frame
-            if display and res.frame_count % display == 0:
+                # display annotated frame
                 disp.send(frame_with_tracks)
-
-            # save annotated frame to video
-            if write_video:
-                vw.write(np.uint8(frame_with_tracks[:frame_size[0], :frame_size[1], :]))
 
             if res.frame_count % interval_save == 0:
                 logging.info('frame {0} processed in {1:1.2f}.'.format(res.frame_count, time.time() - start))
@@ -199,8 +183,6 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
             ee = e
             logging.error(ee)
             # clean up
-            if write_video:
-                vw.release()
             del(vr)
             return -1
 
@@ -215,5 +197,5 @@ def run(file_name: str, save_name: str, *, nflies: int=1, display: int=0, thresh
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     import warnings
-    warnings.filterwarnings("ignore", category=RuntimeWarning) 
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
     defopt.run(run)
