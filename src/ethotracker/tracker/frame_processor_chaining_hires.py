@@ -167,6 +167,10 @@ class Prc():
                                 con_frame[con_frame_mask] = 0
 
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
+                                marker_positions = marker_positions.astype(np.uintp)
+                                # prevent out of bounds errors
+                                marker_positions[:, 0] = np.clip(marker_positions[:, 0], 0, con_frame.shape[0]-1)
+                                marker_positions[:, 1] = np.clip(marker_positions[:, 1], 0, con_frame.shape[1]-1)
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
                                 # plt.figure('watershed')
                                 # plt.subplot(121)
