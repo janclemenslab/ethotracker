@@ -43,8 +43,8 @@ def display_frame(nb_chambers):
         frame_with_tracks = yield
         if frame_with_tracks is not None:
             for cnt, frame in enumerate(frame_with_tracks):
-                ax[cnt, 0].imshow(frame)
-                ax[cnt, 0].axis('off')
+                ax[0,cnt].imshow(frame)
+                ax[0,cnt].axis('off')
             fig.show()
             plt.pause(0.00001)
         else:
