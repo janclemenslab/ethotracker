@@ -121,7 +121,6 @@ class Prc():
 
         # get slices for cropping foreground by chambers
         chamber_slices = [None] * int(res.nchambers)
-        breakpoint()
         for chb in uni_chambers:
             # FIXME: chambers_bounding_box[chb+1...] since box[0] is full frame/background - maybe fix that by removing background? will probably break things in playback tracker
             chamber_slices[chb] = (np.s_[res.chambers_bounding_box[chb+1, 0, 0]:res.chambers_bounding_box[chb+1, 1, 0],
