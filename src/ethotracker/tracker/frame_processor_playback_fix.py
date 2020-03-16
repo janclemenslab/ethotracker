@@ -53,6 +53,8 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     bad_chamber_idx = np.where(bad_chamber)[0]
     for idx in bad_chamber_idx:
         res.chambers[res.chambers==idx] = 0
+    labels = np.unique(res.chambers)
+    res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
     # END OF FIX FIX FIX ------------------------------------------
 
     # 4. order chambers by x position
@@ -119,6 +121,7 @@ class Prc():
 
         # get slices for cropping foreground by chambers
         chamber_slices = [None] * int(res.nchambers)
+        breakpoint()
         for chb in uni_chambers:
             # FIXME: chambers_bounding_box[chb+1...] since box[0] is full frame/background - maybe fix that by removing background? will probably break things in playback tracker
             chamber_slices[chb] = (np.s_[res.chambers_bounding_box[chb+1, 0, 0]:res.chambers_bounding_box[chb+1, 1, 0],
