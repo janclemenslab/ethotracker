@@ -1,4 +1,6 @@
 """Track videos."""
+import matplotlib
+matplotlib.use('MacOSX')
 import sys
 import traceback
 import logging
@@ -36,6 +38,7 @@ def annotate_frame(frame, res, raw_frame=True):
 def display_frame(nb_chambers):
     """Display list of frames."""
     import matplotlib.pyplot as plt
+    plt.ion()
     fig, ax = plt.subplots(ncols=nb_chambers, squeeze=False)
     plt.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top=0.99, wspace=0.01, hspace=0.01)
     RUN = True
@@ -56,6 +59,7 @@ class ProcessorType(Enum):
     chaining = 'chaining'
     playback = 'playback'
     playback_red = 'playback_red'
+    playback_fix = 'playback_fix'
     chaining_hires = 'chaining_hires'
     chaining_coarse = 'chaining_coarse'
 
@@ -90,6 +94,8 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
         from .frame_processor_playback import Prc, init
     elif processor.value == 'playback_red':
         from .frame_processor_playback_red import Prc, init
+    elif processor.value == 'playback_fix':
+        from .frame_processor_playback_fix import Prc, init
     elif processor.value == 'chaining_hires':
         from .frame_processor_chaining_hires import Prc, init
     elif processor.value == 'chaining_coarse':
