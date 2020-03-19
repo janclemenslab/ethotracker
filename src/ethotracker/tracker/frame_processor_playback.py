@@ -33,7 +33,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     # 1. read frame and get foreground
     foreground = fg.threshold(res.background - vr[0][:, :, res.frame_channel], threshold * 255)
     # foreground = fg.erode(foreground, 3)
-    # foreground = cv2.medianBlur(foreground, 3)
+    foreground = cv2.medianBlur(foreground, 3)  # de-speckle foreground
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
@@ -43,7 +43,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
 
     # 4. order chambers by x position
-    new_labels = np.insert(np.argsort(res.chambers_bounding_box[1:,1,1])+1,0,0)
+    new_labels = np.insert(np.argsort(res.chambers_bounding_box[1:, 1, 1]) + 1, 0, 0)
     res.chambers_bounding_box = res.chambers_bounding_box[new_labels, ...]
     res.chambers = fg.remap_labels(res.chambers, new_labels)
 
