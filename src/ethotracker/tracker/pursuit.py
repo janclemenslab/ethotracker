@@ -1,6 +1,9 @@
 """Track videos."""
 import matplotlib
-matplotlib.use('MacOSX')
+try:
+    matplotlib.use('MacOSX')
+except ImportError:
+    pass
 import sys
 import traceback
 import logging
@@ -46,8 +49,8 @@ def display_frame(nb_chambers):
         frame_with_tracks = yield
         if frame_with_tracks is not None:
             for cnt, frame in enumerate(frame_with_tracks):
-                ax[0,cnt].imshow(frame)
-                ax[0,cnt].axis('off')
+                ax[0, cnt].imshow(frame)
+                ax[0, cnt].axis('off')
             fig.show()
             plt.pause(0.00001)
         else:
