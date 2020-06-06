@@ -3,22 +3,24 @@
 ## Installation
 Install dependencies using `conda`:
 ```shell
-conda install numpy scipy h5py peakutils opencv pandas pyyaml matplotlib scikit-image xarray
-conda install deepdish -c conda-forge
-pip install defopt
-pip install git+http://github.com/postpop/videoreader
-pip install git+https://github.com/postpop/attrdict
+conda create -n tracker python==3.7 -y
+conda activate tracker
+conda install numpy scipy h5py opencv pandas pyyaml matplotlib scikit-image xarray ipython
+conda install deepdish peakutils -c conda-forge
+python -m pip install defopt
+python -m pip install git+http://github.com/postpop/videoreader --no-deps
+python -m pip install git+https://github.com/postpop/attrdict --no-deps
 ```
 
 Install the package for production:
 ```shell
-pip install git+https://github.com/janclemenslab/ethotracker
+python -m pip install git+https://github.com/janclemenslab/ethotracker
 ```
 or for development:
 ```shell
 git clone https://github.com/janclemenslab/ethotracker
 cd ethotracker
-pip install -e .
+python -m pip install -e .
 ```
 
 ## Usage
