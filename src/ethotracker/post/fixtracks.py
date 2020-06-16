@@ -1,6 +1,6 @@
 """Functions for correcting tracks - currently implemented: fix head-tail orientation."""
 import numpy as np
-import deepdish as dd
+import flammkuchen
 import scipy.signal
 import logging
 import defopt
@@ -63,7 +63,7 @@ def fix_orientations(lines0, chamber_number=0):
         # 4. fill values using change points - `-1` means we need to swap head and tail
         idx, = np.where(velsmooththres != 0)  # update `idx` to include newly marked change points
         f = scipy.interpolate.interp1d(idx, velsmooththres[idx], kind="nearest", fill_value="extrapolate")
-        idx_new, = np.where(velsmooththres == 0)
+        # idx_new, = np.where(velsmooththres == 0)
         ynew = f(range(velsmooththres.shape[0]))
 
         # 4. swap head and tail
@@ -74,10 +74,10 @@ def fix_orientations(lines0, chamber_number=0):
 def run(track_file_name: str, save_file_name: str):
     """Load data, call fix_orientations and save data."""
     logging.info(f"   processing tracks in {track_file_name}. will save to {save_file_name}")
-    data = dd.io.load(track_file_name)
+    data = flammkuchen.load(track_file_name)
     data['lines'] = fix_orientations(data['lines'])
     logging.info(f"   saving fixed tracks to {save_file_name}")
-    dd.io.save(save_file_name, data)
+    flammkuchen.save(save_file_name, data)
 
 
 if __name__ == "__main__":

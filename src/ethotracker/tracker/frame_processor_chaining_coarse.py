@@ -3,8 +3,6 @@ import cv2
 import os
 import yaml
 import logging
-import deepdish as dd
-import xarray as xr
 import pandas as pd
 from itertools import product
 

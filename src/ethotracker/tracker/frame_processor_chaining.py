@@ -4,8 +4,6 @@ import cv2
 import os
 import yaml
 import logging
-import deepdish as dd
-import xarray as xr
 import pandas as pd
 from itertools import product
 
@@ -56,7 +54,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.nframes = len(vr)
-    
+
     res.centers = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.centers[res.frame_count, 0, :, :] = res.centers_initial
     res.lines = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)

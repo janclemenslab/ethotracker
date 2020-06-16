@@ -21,8 +21,8 @@ def load_data(file_name):
             end_frame = f['frame_count'].value
             chambers_bounding_box = f['chambers_bounding_box'][:]
 
-    import deepdish as dd
-    data = dd.io.load(file_name)
+    import flammkuchen
+    data = flammkuchen.load(file_name)
     pos = data['centers']
     led = data['led']
     start_frame = data['start_frame']

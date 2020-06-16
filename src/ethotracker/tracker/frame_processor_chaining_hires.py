@@ -3,8 +3,6 @@ import cv2
 import os
 import yaml
 import logging
-import deepdish as dd
-import xarray as xr
 import pandas as pd
 from itertools import product
 
@@ -55,7 +53,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
     res.nframes = len(vr)
-   
+
     res.centers = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2), dtype=np.float16)
     res.centers[res.frame_count, 0, :, :] = res.centers_initial
     res.lines = np.zeros((res.nframes + 1000, res.nchambers, res.nflies, 2, 2), dtype=np.float16)
@@ -172,15 +170,16 @@ class Prc():
                                 marker_positions[:, 0] = np.clip(marker_positions[:, 0], 0, con_frame.shape[0]-1)
                                 marker_positions[:, 1] = np.clip(marker_positions[:, 1], 0, con_frame.shape[1]-1)
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
-                                # plt.figure('watershed')
-                                # plt.subplot(121)
-                                # plt.cla()
-                                # plt.imshow(con_frame)
-                                # plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
-                                # plt.subplot(122)
-                                # plt.imshow(ll)
-                                # plt.show()
-                                # plt.pause(0.00001)
+                                plt.figure('watershed')
+                                plt.ion()
+                                plt.subplot(121)
+                                plt.cla()
+                                plt.imshow(con_frame)
+                                plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
+                                plt.subplot(122)
+                                plt.imshow(ll)
+                                plt.show()
+                                plt.pause(0.00001)
 
                                 con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
                                 # only keep foreground points/labels
