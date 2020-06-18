@@ -65,6 +65,7 @@ class ProcessorType(Enum):
     playback_fix = 'playback_fix'
     chaining_hires = 'chaining_hires'
     chaining_coarse = 'chaining_coarse'
+    chaining_coarse_IR = 'chaining_coarse_IR'
 
 
 def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, threshold: float = 0.4,
@@ -103,6 +104,8 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
         from .frame_processor_chaining_hires import Prc, init
     elif processor.value == 'chaining_coarse':
         from .frame_processor_chaining_coarse import Prc, init
+    elif processor.value == 'chaining_coarse_IR':
+        from .frame_processor_chaining_coarse_IR import Prc, init
     else:
         raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
 
