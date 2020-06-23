@@ -1,9 +1,4 @@
 """Track videos."""
-import matplotlib
-try:
-    matplotlib.use('MacOSX')
-except ImportError:
-    pass
 import sys
 import traceback
 import logging
