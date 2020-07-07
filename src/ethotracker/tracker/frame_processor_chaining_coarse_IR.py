@@ -114,7 +114,7 @@ class Prc():
             foreground = fg.threshold(foreground, res.threshold * 255)
             foreground = fg.close(foreground, kernel_size=6)
             foreground = fg.erode(foreground, kernel_size=4)
-            foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
+            foreground = cv2.medianBlur(foreground, 5)  # get rid of specks
             for chb in uni_chambers:
                 FRAME_PROCESSING_ERROR = False  # flag if there were errors during processing of this frames so we can fall back to segment_cluster
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
@@ -123,7 +123,10 @@ class Prc():
                     logging.info(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
-                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=15)
+                    try:
+                        this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=15)
+                    except ValueError as e:
+                        logging.exception(f"FRAME {res.frame_count}: Something went terribly wrong but ignorance is bliss...")
                     # assigning flies to conn comps
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
