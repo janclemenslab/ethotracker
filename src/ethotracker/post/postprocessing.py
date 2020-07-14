@@ -13,21 +13,20 @@ from datetime import datetime
 def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
-            logging.info("Loading deepdish file.")
+            logging.info("Loading deepdish file via attrdict.")
+            import attrdict
+            data = AttrDict().load(file_name)
+            pos = data['centers']
+            led = data['led']
+            start_frame = data['start_frame']
+            end_frame = data['frame_count']
+            chambers_bounding_box = data['chambers_bounding_box']
         else:
             pos = f['centers'][:]
             led = f['led'][:]
             start_frame = f['start_frame'].value
             end_frame = f['frame_count'].value
             chambers_bounding_box = f['chambers_bounding_box'][:]
-
-    import flammkuchen
-    data = flammkuchen.load(file_name)
-    pos = data['centers']
-    led = data['led']
-    start_frame = data['start_frame']
-    end_frame = data['frame_count']
-    chambers_bounding_box = data['chambers_bounding_box']
 
     pos = pos[start_frame + 1:end_frame, :, :]
     led = led[start_frame + 1:end_frame, 0].T
