@@ -14,7 +14,7 @@ def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
             logging.info("Loading deepdish file via attrdict.")
-            import attrdict
+            from attrdict import AttrDict
             data = AttrDict().load(file_name)
             pos = data['centers']
             led = data['led']
