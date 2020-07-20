@@ -14,7 +14,7 @@ def load_data(file_name):
     with h5py.File(file_name, 'r') as f:
         if any([attr.startswith('DEEPDISH') for attr in list(f.attrs)]):
             logging.info("Loading deepdish file via attrdict.")
-            import attrdict
+            from attrdict import AttrDict
             data = AttrDict().load(file_name)
             pos = data['centers']
             led = data['led']
@@ -214,7 +214,10 @@ def main(track_file_name: str, prot_file_name: str, save_file_name: str):
     if os.path.exists(thu_log_filename):
         logging.info('parsing temperature & humidity logs')
         thu_log = pd.DataFrame(parse_log(thu_log_filename, line_filter='temperature:'))
-        plot_thu_log(thu_log, savefilename=os.path.splitext(thu_log_filename)[0] + '.png')
+        try:
+            plot_thu_log(thu_log, savefilename=os.path.splitext(thu_log_filename)[0] + '.png')
+        except:
+            logging.info('Error plotting THU logs')
 
     if len(led_onsets):
         logging.info('Found {0} led onsets'.format(len(led_onsets)))
