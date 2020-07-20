@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='ethotracker',
-      version='0.20',
+      version='0.21',
       description='simple tracker',
       url='http://github.com/janclemenslab/ethotracker',
       author='Jan Clemens',
