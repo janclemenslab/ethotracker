@@ -131,6 +131,7 @@ class Prc():
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                     # alternatively, we could simply "delete" empty conn comps
+                    AAAAAAH = False
                     if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
                         flybins = flybins[1:] - 1  # remove bg bin and shift so it starts at 0 for indexing
 
@@ -227,17 +228,22 @@ class Prc():
                                 centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
                             except ValueError as e:
                                 logging.exception(f"FRAME {res.frame_count}: Something *ALWAYS* goes wrong. Whatever...")
+                                AAAAAAH = True
+                                frame_error[chb] = 6
 
                     else:  # if still flies w/o conn compp fall back to segment_cluster
                         logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         try:
                             centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
+                            frame_error[chb] = 3
                         except ValueError as e:
                             logging.exception(f"FRAME {res.frame_count}: Something *ELSE* went terribly wrong will carry on...")
-                        frame_error[chb] = 3
+                            AAAAAAH = True
+                            frame_error[chb] = 6
 
-                    if points.shape[0] > 0:   # make sure we have not lost the flies in the current frame
+
+                    if not AAAAAAH and points.shape[0] > 0:   # make sure we have not lost the flies in the current frame
                         for label in np.unique(labels):
                             lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
