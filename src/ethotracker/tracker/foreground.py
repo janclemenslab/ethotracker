@@ -188,7 +188,6 @@ def segment_watershed(frame, marker_positions, frame_threshold=180, frame_dilati
         markers = marker_positions
     else:
         markers = np.zeros(frame.shape, dtype=np.uint8)
-        print(markers.shape, marker_positions)
         for cnt, marker_position in enumerate(marker_positions):
             marker_x = np.clip(int(np.floor(marker_position[0])), a_min=0, a_max=frame.shape[1])
             marker_y = np.clip(int(np.floor(marker_position[1])), a_min=0, a_max=frame.shape[1])
