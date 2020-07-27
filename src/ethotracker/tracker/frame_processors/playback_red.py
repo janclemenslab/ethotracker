@@ -3,9 +3,9 @@ import numpy as np
 import logging
 import cv2
 
-from . import foreground as fg
-from . import tracker as tk
-from .background import BackGroundMax, BackGroundMean
+from .. import foreground as fg
+from .. import tracker as tk
+from ..background import BackGroundMax, BackGroundMean
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
@@ -32,30 +32,15 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
     # 1. read frame and get foreground
     foreground = fg.threshold(res.background - vr[0][:, :, res.frame_channel], threshold * 255)
-    # foreground = fg.erode(foreground, 3)
-    # foreground = cv2.medianBlur(foreground, 3)
+    foreground = fg.erode(foreground, 3)
+    foreground = cv2.medianBlur(foreground, 3)
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
-    labels[area < 100] = 0  # mark empty chambers for deletion
+    labels[area < 200] = 0                                                  # mark empty chambers for deletion
     res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
     # 3. get bounding boxes for non-empty chambers for cropping
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
-
-    # BEGINNING OF FIX FIX FIX -----------------------------------
-    # for recordings with misplaced LED
-    # detect the rightmost chamber (which overlaps with the LED in these recordings)
-    bad_chamber = np.logical_and(res.chambers_bounding_box[:,0,1] > 1400, res.chambers_bounding_box[:,1,1] > 1400)
-    # remove the associated bounding box
-    res.chambers_bounding_box = res.chambers_bounding_box[~bad_chamber]
-
-    # remove from labelled image
-    bad_chamber_idx = np.where(bad_chamber)[0]
-    for idx in bad_chamber_idx:
-        res.chambers[res.chambers==idx] = 0
-    labels = np.unique(res.chambers)
-    res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
-    # END OF FIX FIX FIX ------------------------------------------
 
     # 4. order chambers by x position
     new_labels = np.insert(np.argsort(res.chambers_bounding_box[1:,1,1])+1,0,0)

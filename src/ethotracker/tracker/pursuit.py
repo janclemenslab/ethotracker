@@ -11,7 +11,7 @@ import defopt
 from videoreader import VideoReader
 from attrdict import AttrDict
 from . import foreground as fg
-
+from . import frame_processors
 
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
@@ -53,18 +53,8 @@ def display_frame(nb_chambers):
     plt.close()
 
 
-class ProcessorType(Enum):
-    chaining = 'chaining'
-    playback = 'playback'
-    playback_red = 'playback_red'
-    playback_fix = 'playback_fix'
-    chaining_hires = 'chaining_hires'
-    chaining_coarse = 'chaining_coarse'
-    chaining_coarse_IR = 'chaining_coarse_IR'
-
-
 def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, threshold: float = 0.4,
-        start_frame: int = None, override: bool = False, processor='chaining',
+        start_frame: int = None, override: bool = False, processor: str = 'chaining',
         init_only: bool = False, led_coords: List[int] = [], interval_save: int = 1000,
         show_raw_frame: bool = True) -> int:
     """Multi-animal tracker.
@@ -77,7 +67,7 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
       threshold(float): threshold for foreground detection, defaults to 0.4
       start_frame(int): first frame to track, defaults to 0
       override(bool): override existing initialization or intermediate results
-      processor(ProcessorType): class to process frames
+      processor(str): class to process frames
       init_only(bool): only initialize, do not track
       led_coords(list[int]): should be a sequence of 4 values OTHERWISE will autodetect'
       interval_save(int): save intermediate resultse very nth frame
@@ -87,22 +77,7 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
 
     """
     """Track movie."""
-    if processor.value == 'chaining':
-        from .frame_processor_chaining import Prc, init
-    elif processor.value == 'playback':
-        from .frame_processor_playback import Prc, init
-    elif processor.value == 'playback_red':
-        from .frame_processor_playback_red import Prc, init
-    elif processor.value == 'playback_fix':
-        from .frame_processor_playback_fix import Prc, init
-    elif processor.value == 'chaining_hires':
-        from .frame_processor_chaining_hires import Prc, init
-    elif processor.value == 'chaining_coarse':
-        from .frame_processor_chaining_coarse import Prc, init
-    elif processor.value == 'chaining_coarse_IR':
-        from .frame_processor_chaining_coarse_IR import Prc, init
-    else:
-        raise TypeError(f'Unknown frame processor type {processor}. Should be `chaining` or `playback`.')
+    Prc, init = frame_processors.use(processor)
 
     logging.info(f'processing {file_name}')
     vr = VideoReader(file_name)

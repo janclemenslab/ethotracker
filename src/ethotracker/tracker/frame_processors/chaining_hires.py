@@ -1,5 +1,4 @@
 import numpy as np
-import platform
 import cv2
 import os
 import yaml
@@ -7,9 +6,9 @@ import logging
 import pandas as pd
 from itertools import product
 
-from . import foreground as fg
-from . import tracker as tk
-from .background import BackGroundMax
+from .. import foreground as fg
+from .. import tracker as tk
+from ..background import BackGroundMax, BackGroundMean, BackGroundMedian
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
 
@@ -23,7 +22,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     #  background should be: matrix
 
     res = AttrDict()
-    bg = BackGroundMax(vr)
+    bg = BackGroundMean(vr)
     bg.estimate(num_bg_frames, start_frame)
     res.background = bg.background[:, :, 0]
 
@@ -32,16 +31,16 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     with open(annotationfilename, 'r') as f:
         ann = yaml.load(f)
 
-    # LED mask
+    # LED mask and bounding box
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     res.led_mask = cv2.circle(res.led_mask, (int(ann['rectCenterX']), int(ann['rectCenterY'])), int(ann['rectRadius']), color=[1, 1, 1], thickness=-1)
     res.led_coords = fg.get_bounding_box(res.led_mask)[1].ravel()  # bounding boxe for LED for cropping
-    # res.led_coords = fg.get_bounding_box(res.led_mask)  # bounding boxe for LED for cropping
-    # chambers mask
-    res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
-    res.chambers = cv2.circle(res.chambers, (int(ann['centerX']), int(ann['centerY'])), int(ann['radius']+10), color=[1, 1, 1], thickness=-1)
 
-    # chambers bounding box
+    # chambers mask and bounding box
+    res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
+    chamber_center = np.uintp(np.array(res.background.shape)/2)-2
+    chamber_radius = np.uintp(np.min(chamber_center)+50)
+    res.chambers = cv2.circle(res.chambers, tuple(chamber_center), chamber_radius, color=[1, 1, 1], thickness=-1)
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
     # FIXME: no need to pre-pend background anymore?
     res.chambers_bounding_box[0] = [[0, 0], [res.background.shape[0], res.background.shape[1]]]
@@ -100,10 +99,11 @@ class Prc():
             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii+1, 0, 0]:res.chambers_bounding_box[ii+1, 1, 0],
                                         res.chambers_bounding_box[ii+1, 0, 1]:res.chambers_bounding_box[ii+1, 1, 1]])
         # process
+
         while True:
             frame, res = yield
             res.frame_count = int(res.frame_count+1)
-            foreground0 = res.background - frame[:, :, 0]
+            foreground0 = np.abs(res.background - frame[:, :, 0])
             foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
             foreground = fg.erode(foreground, kernel_size=4)
             foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
@@ -115,7 +115,7 @@ class Prc():
                     logging.info(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
-                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=5)
+                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=15)
                     # assigning flies to conn comps
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
@@ -152,34 +152,34 @@ class Prc():
                             else:  # only use additional watershed step when >2 flies in conn comp
                                 # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
-                                fly_area = 150
-                                thres = 0.2
+                                fly_area = 400
                                 while np.sum(con_frame_thres) > flycnt[con]*fly_area:  # shouldn't we use a con_frame_thres with outside flies masked out???
                                     thres += 0.01  # increment thres as long as there are too many foreground pixels for the number of flies
                                     con_frame_thres = (-con_frame+255) > thres*255
-                                # con_frame_thres = fg.erode(con_frame_thres, 3)
+                                con_frame_thres = fg.erode(con_frame_thres, 3)
                                 # 4a. locally adaptive threshold finds gaps between flies
                                 ada = cv2.adaptiveThreshold((-con_frame+255).astype(np.uint8), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, 1)
                                 con_frame_thres[ada == 0] = 0
-                                con_frame_thres = fg.erode(con_frame_thres, 3)
+
                                 # mask out adjacent flies/patches
                                 con_frame[con_frame_mask] = 0
 
-                                # DEFINITELY check area of individual flies...
-                                marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps == con), :][0] - con_offset[::-1]))  # use old positions instead
+                                marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
+                                marker_positions = marker_positions.astype(np.uintp)
+                                # prevent out of bounds errors
+                                marker_positions[:, 0] = np.clip(marker_positions[:, 0], 0, con_frame.shape[0]-1)
+                                marker_positions[:, 1] = np.clip(marker_positions[:, 1], 0, con_frame.shape[1]-1)
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
-
-                                # if flycnt[con]>2:
-                                #     cm = plt.get_cmap('tab10', res.nflies).colors
-                                #     plt.subplot(121)
-                                #     plt.cla()
-                                #     plt.imshow(con_frame, cmap='gray')
-                                #     plt.scatter(marker_positions[:,1], marker_positions[:,0], s=8, c=cm)
-
-                                #     plt.subplot(122)
-                                #     plt.imshow(ll, cmap='tab10')
-                                #     plt.show()
-                                #     plt.pause(0.00001)
+                                # plt.figure('watershed')
+                                # plt.ion()
+                                # plt.subplot(121)
+                                # plt.cla()
+                                # plt.imshow(con_frame)
+                                # plt.plot(marker_positions[:,1], marker_positions[:,0], '.w')
+                                # plt.subplot(122)
+                                # plt.imshow(ll)
+                                # plt.show()
+                                # plt.pause(0.00001)
 
                                 con_labels = con_labels - 2  # labels starts at 1 - "1" is background and we want it to start at "0" for use as index
                                 # only keep foreground points/labels
@@ -218,7 +218,7 @@ class Prc():
                             # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                             centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
 
-                    else:  # if still flies w/o conn compp fall back to segment_cluster
+                    else:  # if still flies w/o conn compp fall back to segment_cluster, using previous positions as initial conditions
                         logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
                         centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
@@ -235,10 +235,6 @@ class Prc():
                 if old_lines is not None and points.shape[0] > 0:   # check that we have not lost all flies in the current frame
                         for label in np.unique(labels):
                             lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
-                # # detect jumps
-                # if old_centers is not None:
-                #     distance_moved = np.sqrt(np.sum((centers - old_centers)**2, axis=2))
-                #     print(distance_moved)
 
             old_centers = np.copy(centers)  # remember
             old_lines = np.copy(lines)  # remember

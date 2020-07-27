@@ -6,11 +6,14 @@ import logging
 import pandas as pd
 from itertools import product
 
-from . import foreground as fg
-from . import tracker as tk
-from .background import BackGroundMax, BackGroundMean, BackGroundMedian
+from .. import foreground as fg
+from .. import ght
+
+from .. import tracker as tk
+from ..background import BackGroundMax, BackGroundMean, BackGroundMedian
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
+plt.ion()
 
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annotationfilename=None):
@@ -39,7 +42,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     # chambers mask and bounding box
     res.chambers = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
     chamber_center = np.uintp(np.array(res.background.shape)/2)-2
-    chamber_radius = np.uintp(np.min(chamber_center)+50)
+    chamber_radius = np.uintp(np.min(chamber_center)-6)
     res.chambers = cv2.circle(res.chambers, tuple(chamber_center), chamber_radius, color=[1, 1, 1], thickness=-1)
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
     # FIXME: no need to pre-pend background anymore?
@@ -99,14 +102,20 @@ class Prc():
             chamber_slices[ii] = (np.s_[res.chambers_bounding_box[ii+1, 0, 0]:res.chambers_bounding_box[ii+1, 1, 0],
                                         res.chambers_bounding_box[ii+1, 0, 1]:res.chambers_bounding_box[ii+1, 1, 1]])
         # process
-
         while True:
             frame, res = yield
+
             res.frame_count = int(res.frame_count+1)
             foreground0 = np.abs(res.background - frame[:, :, 0])
-            foreground = fg.threshold(res.background - frame[:, :, 0], res.threshold * 255)
+
+            # !!! using abs diff here makes this work for recordings under IR
+            foreground = np.abs(res.background - frame[:, :, 0])
+            n, x = np.histogram(foreground.ravel(), bins=128, range=(0, 255))
+            thres, xx = ght.GHT(np.log(1+n), x[:-1], nu=10, tau=10*3, kappa=1, omega=1)
+            foreground = foreground > thres
+            foreground = fg.close(foreground, kernel_size=6)
             foreground = fg.erode(foreground, kernel_size=4)
-            foreground = cv2.medianBlur(foreground, 3)  # get rid of specks
+            foreground = cv2.medianBlur(foreground, 5)  # get rid of specks
             for chb in uni_chambers:
                 FRAME_PROCESSING_ERROR = False  # flag if there were errors during processing of this frames so we can fall back to segment_cluster
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber, chb+1 since 0 is background
@@ -115,11 +124,15 @@ class Prc():
                     logging.info(f"{res.frame_count}: restarting - clustering")
                     frame_error[chb] = 1
                 else:  # for subsequent frames use connected components and split those with multiple flies
-                    this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=15)
+                    try:
+                        this_centers, this_labels, points, _, this_size, labeled_frame = fg.segment_connected_components(foreground_cropped, minimal_size=15)
+                    except ValueError as e:
+                        logging.exception(f"FRAME {res.frame_count}: Something went terribly wrong but ignorance is bliss...")
                     # assigning flies to conn comps
                     fly_conncomps, flycnt, flybins, cnt = fg.find_flies_in_conn_comps(labeled_frame, old_centers[chb, :, :], max_repeats=5, initial_dilation_factor=10, repeat_dilation_factor=5)
                     # if all flies are assigned a conn comp and all conn comps contain a fly - proceed
                     # alternatively, we could simply "delete" empty conn comps
+                    AAAAAAH = False
                     if flycnt[0] == 0 and not np.any(flycnt[1:] == 0):
                         flybins = flybins[1:] - 1  # remove bg bin and shift so it starts at 0 for indexing
 
@@ -152,7 +165,7 @@ class Prc():
                             else:  # only use additional watershed step when >2 flies in conn comp
                                 # 4a. try to set threshold as high as possible - we know the upper bound for the size of a fly, and we know how many flies there are in the current con comp...
                                 thres = res.threshold  # initialize with standard thres
-                                fly_area = 400
+                                fly_area = 600
                                 while np.sum(con_frame_thres) > flycnt[con]*fly_area:  # shouldn't we use a con_frame_thres with outside flies masked out???
                                     thres += 0.01  # increment thres as long as there are too many foreground pixels for the number of flies
                                     con_frame_thres = (-con_frame+255) > thres*255
@@ -165,13 +178,9 @@ class Prc():
                                 con_frame[con_frame_mask] = 0
 
                                 marker_positions = np.vstack(([0, 0], old_centers[chb, np.where(fly_conncomps==con), :][0] - con_offset[::-1]))# use old positions instead
-                                marker_positions = marker_positions.astype(np.uintp)
-                                # prevent out of bounds errors
-                                marker_positions[:, 0] = np.clip(marker_positions[:, 0], 0, con_frame.shape[0]-1)
-                                marker_positions[:, 1] = np.clip(marker_positions[:, 1], 0, con_frame.shape[1]-1)
                                 con_centers, con_labels, con_points, _, _, ll = fg.segment_watershed(con_frame, marker_positions, frame_threshold=180, frame_dilation=7, post_ws_mask=con_frame_thres)
-                                # plt.figure('watershed')
-                                # plt.ion()
+
+                                # plt.figure(999)
                                 # plt.subplot(121)
                                 # plt.cla()
                                 # plt.imshow(con_frame)
@@ -216,15 +225,26 @@ class Prc():
                         if FRAME_PROCESSING_ERROR:
                             logging.info(f"{res.frame_count}: we lost at least one fly (or something else) - falling back to segment cluster - should mark frame as potential jump")
                             # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
-                            centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
+                            try:
+                                centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
+                            except ValueError as e:
+                                logging.exception(f"FRAME {res.frame_count}: Something *ALWAYS* goes wrong. Whatever...")
+                                AAAAAAH = True
+                                frame_error[chb] = 6
 
-                    else:  # if still flies w/o conn compp fall back to segment_cluster, using previous positions as initial conditions
+                    else:  # if still flies w/o conn compp fall back to segment_cluster
                         logging.info(f"{res.frame_count}: {flycnt[0]} outside of the conn comps or conn comp {np.where(flycnt[1:] == 0)} is empty - falling back to segment cluster - should mark frame as potential jump")
                         # centers[chb, :, :], labels, points,  = fg.segment_cluster(foreground_cropped, num_clusters=res.nflies)
-                        centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
-                        frame_error[chb] = 3
+                        try:
+                            centers[chb, :, :], labels, points,  = fg.segment_cluster_sklearn(foreground_cropped, num_clusters=res.nflies, init_method=old_centers[chb, :, :])
+                            frame_error[chb] = 3
+                        except ValueError as e:
+                            logging.exception(f"FRAME {res.frame_count}: Something *ELSE* went terribly wrong will carry on...")
+                            AAAAAAH = True
+                            frame_error[chb] = 6
 
-                    if points.shape[0] > 0:   # make sure we have not lost the flies in the current frame
+
+                    if not AAAAAAH and points.shape[0] > 0:   # make sure we have not lost the flies in the current frame
                         for label in np.unique(labels):
                             lines[chb, label, :, :], _ = tk.fit_line(points[labels[:, 0] == label, :])  # need to make this more robust - based on median center and some pixels around that...
 
