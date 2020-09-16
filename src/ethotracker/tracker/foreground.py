@@ -428,3 +428,20 @@ def show(frame, window_name="frame", time_out=1, autoscale=False):
             frame = frame / np.max(frame)
     cv2.imshow(window_name, np.float32(frame))
     cv2.waitKey(time_out)
+
+
+def estimate_background_drift(background, frame, margin: int = 20):
+    # need to make sure background and frame are float
+
+    mse = []
+    offset_y_range = np.arange(-margin+1, margin)
+    offset_x = 0
+    # compute mse between backgound and current frame for different offsets
+    for offset_y in offset_y_range:
+        dframe = background[margin + offset_y:-margin + offset_y, margin + offset_x:-margin + offset_x].astype(np.float) - \
+                frame[margin - offset_y:-margin - offset_y, margin - offset_x:-margin - offset_x].astype(np.float)
+        mse.append(np.mean(dframe**2))
+
+    offset_y = offset_y_range[np.argmin(mse)]
+
+    return offset_y
