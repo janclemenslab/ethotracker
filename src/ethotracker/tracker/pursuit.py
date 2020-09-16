@@ -3,7 +3,6 @@ import sys
 import traceback
 import logging
 import time
-from enum import Enum
 from typing import List
 import cv2
 import numpy as np
