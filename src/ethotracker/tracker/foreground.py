@@ -235,7 +235,7 @@ def find_flies_in_conn_comps(labeled_frame, positions, max_repeats=5, initial_di
     cnt = 0  # n-repeat of conn comp
     flycnt = [nflies]  # init with all flies outside of conn comps
     while flycnt[0] > 0 and cnt < max_repeats:  # flies outside of conn comps
-        if cnt is not 0:  # do not display on first pass
+        if cnt != 0:  # do not display on first pass
             # print(f"{flycnt[0]} outside of the conn comps - growing blobs")
             if flycnt[0] == nflies:
                 print('   something is wrong')
