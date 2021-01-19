@@ -1,5 +1,6 @@
 """Track videos."""
 import sys
+import os
 import traceback
 import logging
 import time
@@ -119,6 +120,12 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
         else:
             logging.info('and no leed coords provided as arg - auto detecting')
             res.led_coords = fg.detect_led(vr[res.start_frame])
+
+    # ensure save dir exists
+    save_dir = os.path.dirname(save_name)
+    if len(save_dir) > 0:
+        logging.info(f'Creating save directory {save_dir}.')
+        os.makedirs(save_dir, exist_ok=True)
 
     if init_only:
         return
