@@ -8,6 +8,7 @@ from .. import tracker as tk
 from ..background import BackGroundMax, BackGroundMean
 from attrdict import AttrDict
 import matplotlib.pyplot as plt
+import scipy.ndimage
 
 
 def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
@@ -32,15 +33,22 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     bg = BackGroundMean(vr)  # use mean background since max background merged LED with last chamber
     bg.estimate(100, start_frame)
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
+
     # 1. read frame and get foreground
-    foreground = fg.threshold(res.background - vr[0][:, :, res.frame_channel], threshold * 255)
-    # foreground = fg.erode(foreground, 3)
+    frame = vr[start_frame][:, :, res.frame_channel]
+
+    # shift correct
+    offset_x, offset_y = fg.estimate_background_drift2(res.background, frame)
+    frame = scipy.ndimage.shift(frame, [offset_x, offset_y])
+    foreground = fg.threshold(res.background - frame, threshold * 255)
     foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # de-speckle foreground
+
     # 2. segment and get flies and remove chamber if empty or "fly" too small
     labels = np.unique(res.chambers)
     area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
     labels[area < 100] = 0                                                  # mark empty chambers for deletion
     res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
+
     # 3. get bounding boxes for non-empty chambers for cropping
     res.chambers_bounding_box = fg.get_bounding_box(res.chambers)  # get bounding boxes of remaining chambers
 
@@ -113,29 +121,27 @@ class Prc():
             chamber_slices[chb] = (np.s_[res.chambers_bounding_box[chb+1, 0, 0]:res.chambers_bounding_box[chb+1, 1, 0],
                                          res.chambers_bounding_box[chb+1, 0, 1]:res.chambers_bounding_box[chb+1, 1, 1]])
         # process
-        offset_y = None
-        margin = 20
-        offset_x = 0
         while True:
             frame, res = yield  # get new frame
             res.frame_count = int(res.frame_count+1)
 
-            # estimate frame drift every 1000th frame
-            if res.frame_count is None or res.frame_count % 1_000 == 1:
-                offset_y = fg.estimate_background_drift(res.background, frame[:, :, res.frame_channel], margin)
-                logging.info(f'  The offset for frame {res.frame_count} is {offset_y} px.')
+            frame = frame[:, :, res.frame_channel].astype(np.float)
+
+            # estimate frame drift every 100th frame
+            if res.frame_count is None or res.frame_count % 100 == 1:
+                offset_x, offset_y = fg.estimate_background_drift2(res.background, frame)
+                logging.info(f'  Frame {res.frame_count} is offset by {offset_x}px in x and by {offset_y}px in y.')
+            frame = scipy.ndimage.shift(frame, [offset_x, offset_y])
 
             # background subtract drift-corrected frames
-            foreground = res.background[margin + offset_y:-margin + offset_y, margin + offset_x:-margin + offset_x].astype(np.float) - \
-                         frame[margin - offset_y:-margin - offset_y, margin - offset_x:-margin - offset_x, res.frame_channel].astype(np.float)
+            foreground = fg.threshold(res.background - frame, res.threshold * 255)
 
             # restore original size and position
-            foreground = np.pad(foreground, pad_width=((margin, margin), (margin, margin)), mode='edge')
-            foreground = fg.threshold(foreground, res.threshold * 255)
+            # foreground = np.pad(foreground, pad_width=((margin, margin), (margin, margin)), mode='edge')
+            # foreground = fg.threshold(foreground, res.threshold * 255)
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
             foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
-            foreground = cv2.medianBlur(foreground.astype(np.uint8), ksize=13)  # smooth out fly shapes
-
+            # foreground = cv2.medianBlur(foreground.astype(np.uint8), ksize=13)  # smooth out fly shapes
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
 

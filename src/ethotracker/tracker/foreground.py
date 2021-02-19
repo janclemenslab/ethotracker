@@ -445,3 +445,12 @@ def estimate_background_drift(background, frame, margin: int = 20):
     offset_y = offset_y_range[np.argmin(mse)]
 
     return offset_y
+
+
+def estimate_background_drift2(background, frame):
+    import skimage.registration
+    # ensure everything is afloat (sic)
+    background, frame = background.astype(np.float), frame.astype(np.float)
+    shift, error, diffphase = skimage.registration.phase_cross_correlation(background, frame, upsample_factor=100)
+    offset_x, offset_y = shift[0], shift[1]
+    return offset_x, offset_y
