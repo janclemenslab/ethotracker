@@ -34,18 +34,26 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100):
     bg.estimate(100, start_frame)
     res.chambers = fg.get_chambers(bg.background[:, :, res.frame_channel], chamber_threshold=1.0, min_size=35000, max_size=200000, kernel_size=17)
 
-    # 1. read frame and get foreground
-    frame = vr[start_frame][:, :, res.frame_channel]
-
-    # shift correct
-    offset_x, offset_y = fg.estimate_background_drift2(res.background, frame)
-    frame = scipy.ndimage.shift(frame, [offset_x, offset_y])
-    foreground = fg.threshold(res.background - frame, threshold * 255)
-    foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # de-speckle foreground
-
-    # 2. segment and get flies and remove chamber if empty or "fly" too small
+    # 1. read frames and get foreground
+    nframes = 10 # number of frames for fly detection
+    frames = vr[start_frame:start_frame+(1000*nframes):1000]
     labels = np.unique(res.chambers)
-    area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
+    area = np.zeros(labels.size)
+
+    for frame in frames:
+        frame = frame[:, :, res.frame_channel]
+        # shift correct
+        offset_x, offset_y = fg.estimate_background_drift2(res.background, frame)
+        frame = scipy.ndimage.shift(frame, [offset_x, offset_y])
+        foreground = fg.threshold(res.background - frame, threshold * 255)
+        foreground = cv2.medianBlur(foreground.astype(np.uint8), 3)  # de-speckle foreground
+
+        # 2a. segment and collect fly areas
+        frame_area = np.array([fg.segment_center_of_mass(foreground * (res.chambers == label))[4] for label in labels])  # get fly size for each chamber
+        area += frame_area
+    area = area//nframes # average
+
+    # 2b. remove chamber if empty or "fly" too small
     labels[area < 100] = 0                                                  # mark empty chambers for deletion
     res.chambers, _, _ = fg.clean_labels(res.chambers, labels, force_cont=True)  # delete empty chambers
 
