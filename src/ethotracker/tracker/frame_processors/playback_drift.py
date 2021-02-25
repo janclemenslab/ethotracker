@@ -147,8 +147,9 @@ class Prc():
             # restore original size and position
             # foreground = np.pad(foreground, pad_width=((margin, margin), (margin, margin)), mode='edge')
             # foreground = fg.threshold(foreground, res.threshold * 255)
-            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
-            foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
+            foreground = fg.erode(foreground.astype(np.uint8), kernel_size=3)  # get rid of artefacts from chamber border
+            foreground = fg.close(foreground.astype(np.uint8), kernel_size=3)  # smooth out fly shapes
+            foreground = fg.dilate(foreground.astype(np.uint8), kernel_size=4) # cover the whole fly
             # foreground = cv2.medianBlur(foreground.astype(np.uint8), ksize=13)  # smooth out fly shapes
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
