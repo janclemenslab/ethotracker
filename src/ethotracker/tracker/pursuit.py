@@ -4,7 +4,7 @@ import os
 import traceback
 import logging
 import time
-from typing import List
+from typing import List, Optional
 import cv2
 import numpy as np
 import defopt
@@ -54,8 +54,8 @@ def display_frame(nb_chambers):
 
 
 def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, threshold: float = 0.4,
-        start_frame: int = None, override: bool = False, processor: str = 'chaining',
-        init_only: bool = False, led_coords: List[int] = [], interval_save: int = 1000,
+        start_frame: Optional[int] = None, override: bool = False, processor: str = 'chaining',
+        init_only: bool = False, led_coords: Optional[List[int]] = None, interval_save: int = 1000,
         show_raw_frame: bool = True) -> int:
     """Multi-animal tracker.
 
@@ -65,18 +65,17 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
       nflies(int): number of flies in video
       display(int): show every Nth frame (do not show anything if 0)
       threshold(float): threshold for foreground detection, defaults to 0.4
-      start_frame(int): first frame to track, defaults to 0
+      start_frame(Optional[int]): first frame to track, defaults to 0
       override(bool): override existing initialization or intermediate results
       processor(str): class to process frames
       init_only(bool): only initialize, do not track
-      led_coords(list[int]): should be a sequence of 4 values OTHERWISE will autodetect'
+      led_coords(Optional[List[int]]): should be a sequence of 4 values OTHERWISE will autodetect'
       interval_save(int): save intermediate resultse very nth frame
 
     Returns:
       exitcode
 
     """
-    """Track movie."""
     Prc, init = frame_processors.use(processor)
 
     logging.info(f'processing {file_name}')
@@ -114,11 +113,11 @@ def run(file_name: str, save_name: str, *, nflies: int = 1, display: int = 0, th
     # this should happen in frame processor for playback - not needed for chaining since we annotate
     if not hasattr(res, 'led_coords') or res.led_coords is None:
         logging.info('no leed coords in res')
-        if len(led_coords) == 4:
+        if led_coords is not None and len(led_coords) == 4:
             logging.info('using coords provided in arg')
             res.led_coords = led_coords
         else:
-            logging.info('and no leed coords provided as arg - auto detecting')
+            logging.info('and no leed coords provided as arg or wrong format - auto detecting')
             res.led_coords = fg.detect_led(vr[res.start_frame])
 
     # ensure save dir exists
