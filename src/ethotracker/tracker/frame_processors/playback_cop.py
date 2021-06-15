@@ -141,10 +141,10 @@ class Prc():
             foreground = fg.erode(foreground.astype(np.uint8), kernel_size=4)  # get rid of artefacts from chamber border
             foreground = fg.close(foreground.astype(np.uint8), kernel_size=4)  # smooth out fly shapes
 
+            skip_chb_list = []
             for chb in uni_chambers:
                 foreground_cropped = foreground[chamber_slices[chb]] * (res.chambers[chamber_slices[chb]] == chb+1)  # crop frame to current chamber
 
-                skip_lines = False
                 try:
                     if res.nflies == 1:
                         centers[chb, :, :], labels, points, _, area[0, chb] = fg.segment_center_of_mass(foreground_cropped)
@@ -162,20 +162,21 @@ class Prc():
 
                 except:
                     logging.info(f'  Chamber {chb} frame {res.frame_count} failed to find enough clusters, setting centers and lines to previous frame')
-                    centers = old_centers
-                    lines = old_lines
-                    skip_lines = True
+                    centers[chb, :, :] = old_centers[chb, :, :]
+                    lines[chb, :, :] = old_lines[chb, :, :]
+                    skip_chb_list.append(chb)
+            old_centers = np.copy(centers)  # remember
 
-            if (old_lines is not None) and (not skip_lines):  # fix forward/backward flips
+            if old_lines is not None:  # fix forward/backward flips
                 for chb in uni_chambers:
-                    if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
-                        for label in np.unique(labels):
-                            lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
+                    if chb not in skip_chb_list:
+                        if points.shape[0] > 0:   # check that we have not lost all flies in the current frame
+                            for label in np.unique(labels):
+                                lines[chb, label, :, :], is_flipped, D = tk.fix_flips(old_lines[chb, label, 0, :], lines[chb, label, :, :])
+            old_lines = np.copy(lines)  # remember
 
             res.centers[res.frame_count, :, :, :] = centers
             res.lines[res.frame_count, :, 0:lines.shape[1], :, :] = lines
             res.area[res.frame_count, :] = 0
 
-            old_centers = np.copy(centers)  # remember
-            old_lines = np.copy(lines)  # remember
             yield res, foreground
