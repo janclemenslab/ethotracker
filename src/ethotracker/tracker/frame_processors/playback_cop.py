@@ -162,8 +162,9 @@ class Prc():
 
                 except:
                     logging.info(f'  Chamber {chb} frame {res.frame_count} failed to find enough clusters, setting centers and lines to previous frame')
-                    centers[chb, :, :] = old_centers[chb, :, :]
-                    lines[chb, :, :] = old_lines[chb, :, :]
+                    if old_centers is not None:
+                        centers[chb, :, :] = old_centers[chb, :, :]
+                        lines[chb, :, :] = old_lines[chb, :, :]
                     skip_chb_list.append(chb)
             old_centers = np.copy(centers)  # remember
 
