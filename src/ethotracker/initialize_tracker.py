@@ -202,7 +202,7 @@ def save(filename, dict):
 def load(filename):
     """Read dict from YAML"""
     with open(filename, 'r') as stream:
-        data_loaded = yaml.load(stream)
+        data_loaded = yaml.safe_load(stream)
     return data_loaded
 
 
