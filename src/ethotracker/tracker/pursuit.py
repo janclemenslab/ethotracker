@@ -13,6 +13,7 @@ from attrdict import AttrDict
 from . import foreground as fg
 from . import frame_processors
 
+
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
     uni_chambers = np.unique(res.chambers).astype(np.int)
