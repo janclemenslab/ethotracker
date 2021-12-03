@@ -16,7 +16,7 @@ from . import frame_processors
 
 def annotate_frame(frame, res, raw_frame=True):
     """Add centroids and lines to frame."""
-    uni_chambers = np.unique(res.chambers).astype(np.int)
+    uni_chambers = np.unique(res.chambers).astype(int)
     frame_with_tracks = list()
     for chamberID in range(np.max(uni_chambers)):
         if raw_frame:
