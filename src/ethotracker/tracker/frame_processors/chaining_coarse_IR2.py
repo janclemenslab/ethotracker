@@ -32,7 +32,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     # load annotation filename
     annotationfilename = os.path.splitext(file_name)[0] + '_annotated.txt'
     with open(annotationfilename, 'r') as f:
-        ann = yaml.load(f)
+        ann = yaml.safe_load(f)
 
     # LED mask and bounding box
     res.led_mask = np.zeros((vr.frame_width, vr.frame_height), dtype=np.uint8)
