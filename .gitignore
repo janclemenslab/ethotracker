@@ -94,3 +94,4 @@ ENV/
 
 .mypy*
 .vscode/settings.json
+test
