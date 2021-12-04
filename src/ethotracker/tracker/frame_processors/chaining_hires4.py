@@ -47,7 +47,7 @@ def init(vr, start_frame, threshold, nflies, file_name, num_bg_frames=100, annot
     res.centers_initial = ann['flypositions']
     # init Results structure
     res.nchambers = int(np.max(res.chambers))
-    res.nflies = int(nflies / res.nchambers)
+    res.nflies = int(ann['nFlies'] / res.nchambers)
     res.file_name = file_name
     res.start_frame = int(start_frame)
     res.frame_count = int(start_frame)
