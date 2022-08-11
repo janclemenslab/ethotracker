@@ -23,7 +23,7 @@ class BackGround():
         """Construct - vr is VideoReader instance."""
         self.vr = vr
         self.frames = []
-        self.background = np.zeros((self.vr.frame_width, self.vr.frame_height, self.vr.frame_channels))
+        self.background = np.zeros((self.vr.frame_height, self.vr.frame_width, self.vr.frame_channels))
         self.background_count = 0
 
     def estimate(self, num_bg_frames=100, start_frame=1):
